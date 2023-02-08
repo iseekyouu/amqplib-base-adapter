@@ -1,3 +1,3 @@
-import { BaseConsumer } from './base.consumer';
+import { BaseConsumer, BaseConsumerConfig, Message } from './base.consumer';
 
-export { BaseConsumer };
+export { BaseConsumer, BaseConsumerConfig, Message };
