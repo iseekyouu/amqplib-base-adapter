@@ -19,5 +19,12 @@
   "bugs": {
     "url": "https://github.com/iseekyouu/amqplib-base-adapter/issues"
   },
-  "homepage": "https://github.com/iseekyouu/amqplib-base-adapter#readme"
+  "homepage": "https://github.com/iseekyouu/amqplib-base-adapter#readme",
+  "dependencies": {
+    "amqplib": "^0.10.3",
+    "winston": "^3.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.18"
+  }
 }
