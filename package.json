@@ -2,9 +2,10 @@
   "name": "amqplib-base-adapter",
   "version": "1.0.3",
   "description": "base adapter form amqplib",
-  "main": "index.ts",
+  "main": "index.js",
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "build": "tsc -b"
   },
   "repository": {
     "type": "git",
@@ -25,6 +26,7 @@
     "winston": "^3.8.2"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.1",
     "@types/node": "^18.11.18"
   }
 }
