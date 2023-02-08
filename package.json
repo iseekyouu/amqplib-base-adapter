@@ -1,0 +1,23 @@
+{
+  "name": "amqplib-base-adapter",
+  "version": "1.0.0",
+  "description": "base adapter form amqplib",
+  "main": "index.ts",
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/iseekyouu/amqplib-base-adapter.git"
+  },
+  "keywords": [
+    "amqplib",
+    "adapter"
+  ],
+  "author": "iseekyouu",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/iseekyouu/amqplib-base-adapter/issues"
+  },
+  "homepage": "https://github.com/iseekyouu/amqplib-base-adapter#readme"
+}
