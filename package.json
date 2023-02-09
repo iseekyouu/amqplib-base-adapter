@@ -2,7 +2,7 @@
   "name": "amqplib-base-adapter",
   "version": "1.0.7",
   "description": "base adapter form amqplib",
-  "main": "src/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "test": "test",
     "build": "tsc -b",
