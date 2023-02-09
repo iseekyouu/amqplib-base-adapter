@@ -9,7 +9,7 @@ As logger it uses winston.
 You can find producer and consumer example in /examples directory
 
 ## Consumer example
-```javascript
+```typescript
 const ConsumerExampleConfig: BaseConsumerConfig = {
   queue: 'example.queue',
   exchange: 'example_exchange',
@@ -17,7 +17,7 @@ const ConsumerExampleConfig: BaseConsumerConfig = {
   routingKey: 'example_route',
   prefetch: 1,
   rmq: {
-    host: env.RMQ_CLUSTER_ADDRESSES,
+    host: env.RMQ_CLUSTER_ADDRESS,
     password: env.RMQ_CLUSTER_PASSWORD,
     port: env.RMQ_CLUSTER_PORT,
     username: env.RMQ_CLUSTER_USERNAME,
@@ -30,7 +30,7 @@ class ConsumerExample extends BaseConsumer {
     try {
       this.logger.info({ message });
     } catch (err) {
-      this.logger.error('Reactivation consumer error handle message', err);
+      this.logger.error('[ConsumerExample] error handle message', err);
     }
   }
 }
@@ -40,13 +40,13 @@ void consumerExample.run();
 ```
 
 ## Producer example
-```javascript
+```typescript
 const ProducerExampleConfig = {
   exchange: 'example_exchange',
   exchangeType: 'topic',
   routingKey: 'example_route',
   rmq: {
-    host: env.RMQ_CLUSTER_ADDRESSES,
+    host: env.RMQ_CLUSTER_ADDRESS,
     password: env.RMQ_CLUSTER_PASSWORD,
     port: env.RMQ_CLUSTER_PORT,
     username: env.RMQ_CLUSTER_USERNAME,
