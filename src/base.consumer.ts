@@ -1,24 +1,10 @@
 import {
-  Channel,
-  connect,
-  Connection,
   Message,
   Replies,
 } from 'amqplib';
-import {
-  createLogger,
-  format,
-  Logger,
-  transports,
-} from 'winston';
-import Consume = Replies.Consume;
-
-type Rmq = {
-  host: string,
-  port: number,
-  username: string,
-  password: string,
-};
+import { Connector } from './connector';
+import { createLogger, Logger } from './logger';
+import { Rmq } from './types';
 
 interface BaseConsumerConfig {
   queue: string,
@@ -30,7 +16,7 @@ interface BaseConsumerConfig {
   environment?: string,
 }
 
-abstract class BaseConsumer {
+abstract class BaseConsumer extends Connector {
   private readonly queue: string;
 
   private readonly exchange: string;
@@ -41,65 +27,18 @@ abstract class BaseConsumer {
 
   private readonly prefetch: number;
 
-  private readonly rmq: Rmq;
-
-  private connection: Connection | undefined;
-
-  private channel: Channel | any;
-
-  protected logger: Logger;
-
   constructor(config: BaseConsumerConfig) {
+    super(config);
     this.queue = config.queue;
     this.exchange = config.exchange;
     this.exchangeType = config.exchangeType;
     this.routingKey = config.routingKey;
     this.prefetch = config.prefetch;
-    this.rmq = config.rmq;
-
-    const level = config.environment === 'development' ?
-      'debug' : 'error';
-
-    this.logger = createLogger({
-      level,
-      format: format.combine(
-        format.errors({ stack: true }),
-        format.metadata(),
-        format.timestamp(),
-        format.json(),
-      ),
-      exitOnError: false,
-      transports: [
-        new transports.Console(),
-      ],
-    });
-  }
-
-  async getConnection(): Promise<Connection> {
-    try {
-      this.logger.info('[rabbitmq] Connected');
-      return await connect({
-        protocol: 'amqp',
-        hostname: this.rmq.host,
-        port: this.rmq.port,
-        username: this.rmq.username,
-        password: this.rmq.password,
-      });
-    } catch (err) {
-      this.logger.error('[rabbitmq] Connection failed', err);
-      return this.getConnection();
-    }
   }
 
   async run(): Promise<void> {
-    this.connection = await this.getConnection();
-    this.connection.on('error', (error: any) => {
-      this.logger.error(error);
-      process.exit(1);
-    });
-
-    this.channel = await this.connection.createChannel();
-    this.logger.info('[rabbitmq] Channel created');
+    await this.createConnection();
+    await this.createChannel();
 
     if (this.prefetch) {
       await this.channel.prefetch(this.prefetch);
@@ -110,8 +49,8 @@ abstract class BaseConsumer {
       this.exchangeType,
       { durable: true },
     );
-
     this.logger.info(`Exchange ${this.exchange} asserted`);
+
     await this.channel.assertQueue(this.queue, {
       arguments: {
         durable: true,
@@ -125,12 +64,12 @@ abstract class BaseConsumer {
       this.exchange,
       this.routingKey,
     );
-
     this.logger.info(`${this.queue} bound to ${this.exchange}`);
+
     await this.consume();
   }
 
-  async consume(): Promise<Consume> {
+  async consume(): Promise<Replies.Consume> {
     return this.channel.consume(this.queue, async (message: Message) => {
       if (message === null) {
         return;

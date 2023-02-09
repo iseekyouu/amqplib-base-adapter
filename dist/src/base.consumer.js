@@ -10,54 +10,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.BaseConsumer = void 0;
-const amqplib_1 = require("amqplib");
-const winston_1 = require("winston");
-class BaseConsumer {
+const connector_1 = require("./connector");
+class BaseConsumer extends connector_1.Connector {
     constructor(config) {
+        super(config);
         this.queue = config.queue;
         this.exchange = config.exchange;
         this.exchangeType = config.exchangeType;
         this.routingKey = config.routingKey;
         this.prefetch = config.prefetch;
-        this.rmq = config.rmq;
-        const level = config.environment === 'development' ?
-            'debug' : 'error';
-        this.logger = (0, winston_1.createLogger)({
-            level,
-            format: winston_1.format.combine(winston_1.format.errors({ stack: true }), winston_1.format.metadata(), winston_1.format.timestamp(), winston_1.format.json()),
-            exitOnError: false,
-            transports: [
-                new winston_1.transports.Console(),
-            ],
-        });
-    }
-    getConnection() {
-        return __awaiter(this, void 0, void 0, function* () {
-            try {
-                this.logger.info('[rabbitmq] Connected');
-                return yield (0, amqplib_1.connect)({
-                    protocol: 'amqp',
-                    hostname: this.rmq.host,
-                    port: this.rmq.port,
-                    username: this.rmq.username,
-                    password: this.rmq.password,
-                });
-            }
-            catch (err) {
-                this.logger.error('[rabbitmq] Connection failed', err);
-                return this.getConnection();
-            }
-        });
     }
     run() {
         return __awaiter(this, void 0, void 0, function* () {
-            this.connection = yield this.getConnection();
-            this.connection.on('error', (error) => {
-                this.logger.error(error);
-                process.exit(1);
-            });
-            this.channel = yield this.connection.createChannel();
-            this.logger.info('[rabbitmq] Channel created');
+            yield this.createConnection();
+            yield this.createChannel();
             if (this.prefetch) {
                 yield this.channel.prefetch(this.prefetch);
             }
