@@ -3,6 +3,10 @@
   "version": "1.0.9",
   "description": "base adapter form amqplib",
   "main": "dist/index.js",
+  "files": [
+    "src/",
+    "dist/"
+  ],
   "scripts": {
     "test": "test",
     "build": "tsc -b",
