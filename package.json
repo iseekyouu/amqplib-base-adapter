@@ -1,11 +1,12 @@
 {
   "name": "amqplib-base-adapter",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "base adapter form amqplib",
-  "main": "index.js",
+  "main": "src/index.js",
   "scripts": {
     "test": "test",
-    "build": "tsc -b"
+    "build": "tsc -b",
+    "consumer-test": "export TS_NODE_BASEURL=./dist && tsc && nodemon test/consumer.js"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.1",
-    "@types/node": "^18.11.18"
+    "@types/node": "^18.11.18",
+    "nodemon": "^2.0.20"
   }
 }
