@@ -8,7 +8,7 @@ export const ConsumerExampleConfig: BaseConsumerConfig = {
   routingKey: 'example_route',
   prefetch: 1,
   rmq: {
-    host: env.RMQ_CLUSTER_ADDRESSES,
+    host: env.RMQ_CLUSTER_ADDRESS,
     password: env.RMQ_CLUSTER_PASSWORD,
     port: env.RMQ_CLUSTER_PORT,
     username: env.RMQ_CLUSTER_USERNAME,
