@@ -1,5 +1,14 @@
-import { BaseConsumer, BaseConsumerConfig, Message } from './base.consumer';
+import {
+  BaseConsumer,
+  BaseConsumerConfig,
+  Message,
+} from './base.consumer';
 
-export { BaseConsumer };
+import {
+  BaseProducer,
+  BaseProducerConfig,
+} from './base.producer';
 
-export type { BaseConsumerConfig, Message };
+export { BaseConsumer, BaseProducer };
+
+export type { BaseConsumerConfig, BaseProducerConfig, Message };

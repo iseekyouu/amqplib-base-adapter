@@ -6,7 +6,7 @@
   "scripts": {
     "test": "test",
     "build": "tsc -b",
-    "push": "yarn build && yarn version && yarn publish",
+    "push": "yarn build && yarn publish",
     "consumer-test": "export TS_NODE_BASEURL=./dist && tsc && node test/consumer.example.js",
     "producer-test": "export TS_NODE_BASEURL=./dist && tsc && node test/producer.example.js"
   },
