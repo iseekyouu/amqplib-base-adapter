@@ -2,7 +2,8 @@
   "name": "amqplib-base-adapter",
   "version": "1.0.10",
   "description": "base adapter form amqplib",
-  "main": "dist/index.js",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "files": [
     "src/",
     "dist/"
