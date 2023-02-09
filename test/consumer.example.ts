@@ -2,10 +2,10 @@ import { BaseConsumer, BaseConsumerConfig } from '../src/base.consumer';
 import { env } from './config';
 
 export const ConsumerExampleConfig: BaseConsumerConfig = {
-  queue: 'test.queue',
-  exchange: 'test',
+  queue: 'example.queue',
+  exchange: 'example_exchange',
   exchangeType: 'topic',
-  routingKey: 'test',
+  routingKey: 'example_route',
   prefetch: 1,
   rmq: {
     host: env.RMQ_CLUSTER_ADDRESSES,

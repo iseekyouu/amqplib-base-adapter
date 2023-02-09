@@ -9,15 +9,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConsumerExampleConfig = void 0;
-const base_consumer_1 = require("../src/base.consumer");
+exports.ProducerExampleConfig = void 0;
+const base_producer_1 = require("../src/base.producer");
 const config_1 = require("./config");
-exports.ConsumerExampleConfig = {
-    queue: 'test.queue',
-    exchange: 'test',
+exports.ProducerExampleConfig = {
+    exchange: 'example_exchange',
     exchangeType: 'topic',
-    routingKey: 'test',
-    prefetch: 1,
+    routingKey: 'example_route',
     rmq: {
         host: config_1.env.RMQ_CLUSTER_ADDRESSES,
         password: config_1.env.RMQ_CLUSTER_PASSWORD,
@@ -26,17 +24,22 @@ exports.ConsumerExampleConfig = {
     },
     environment: config_1.env.ENVIRONMENT,
 };
-class ConsumerExample extends base_consumer_1.BaseConsumer {
-    handleMessage(message) {
+class ProducerExample extends base_producer_1.BaseProducer {
+    publish() {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                this.logger.info({ message });
+                const message = Buffer.from(JSON.stringify({
+                    test: 'testdata1',
+                }));
+                const result = (_a = this.channel) === null || _a === void 0 ? void 0 : _a.publish(this.exchange, this.routingKey, message);
+                this.logger.info('[rabbitmq] publish result: ', { result, message });
             }
-            catch (err) {
-                this.logger.error('Reactivation consumer error handle message', err);
+            catch (error) {
+                this.logger.error('[ProducerExample] error publish messages', error);
             }
         });
     }
 }
-const consumerExample = new ConsumerExample(exports.ConsumerExampleConfig);
-void consumerExample.run();
+const producerExample = new ProducerExample(exports.ProducerExampleConfig);
+void producerExample.run();
