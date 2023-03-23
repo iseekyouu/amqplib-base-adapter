@@ -17,7 +17,7 @@ exports.ProducerExampleConfig = {
     exchangeType: 'topic',
     routingKey: 'example_route',
     rmq: {
-        host: config_1.env.RMQ_CLUSTER_ADDRESSES,
+        host: config_1.env.RMQ_CLUSTER_ADDRESS,
         password: config_1.env.RMQ_CLUSTER_PASSWORD,
         port: config_1.env.RMQ_CLUSTER_PORT,
         username: config_1.env.RMQ_CLUSTER_USERNAME,

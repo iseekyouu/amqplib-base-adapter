@@ -1,7 +1,7 @@
 # Overview
 Base adapter for [amqplib](https://www.npmjs.com/package/amqplib)
 
-With all connection logic and logs.
+With all connection logic and logs!
 
 As logger it uses winston.
 

@@ -19,6 +19,10 @@ class BaseConsumer extends connector_1.Connector {
         this.exchangeType = config.exchangeType;
         this.routingKey = config.routingKey;
         this.prefetch = config.prefetch;
+        this.nack = config.nack || {
+            allUpTo: false,
+            requeue: true,
+        };
     }
     run() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -65,7 +69,7 @@ class BaseConsumer extends connector_1.Connector {
                         routingKey: this.routingKey,
                         content: message.content.toString(),
                     });
-                    yield this.channel.nack(message);
+                    yield this.channel.nack(message, this.nack.allUpTo, this.nack.requeue);
                 }
             }));
         });

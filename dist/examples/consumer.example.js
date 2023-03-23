@@ -19,7 +19,7 @@ exports.ConsumerExampleConfig = {
     routingKey: 'example_route',
     prefetch: 1,
     rmq: {
-        host: config_1.env.RMQ_CLUSTER_ADDRESSES,
+        host: config_1.env.RMQ_CLUSTER_ADDRESS,
         password: config_1.env.RMQ_CLUSTER_PASSWORD,
         port: config_1.env.RMQ_CLUSTER_PORT,
         username: config_1.env.RMQ_CLUSTER_USERNAME,

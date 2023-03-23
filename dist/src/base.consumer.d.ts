@@ -1,6 +1,10 @@
 import { Message, Replies } from 'amqplib';
 import { Connector } from './connector';
 import { Rmq } from './types';
+declare type Nack = {
+    allUpTo: boolean;
+    requeue: boolean;
+};
 interface BaseConsumerConfig {
     queue: string;
     exchange: string;
@@ -9,6 +13,7 @@ interface BaseConsumerConfig {
     prefetch: number;
     rmq: Rmq;
     environment?: string;
+    nack?: Nack;
 }
 declare abstract class BaseConsumer extends Connector {
     private readonly queue;
@@ -16,6 +21,7 @@ declare abstract class BaseConsumer extends Connector {
     private readonly exchangeType;
     private readonly routingKey;
     private readonly prefetch;
+    nack: Nack;
     constructor(config: BaseConsumerConfig);
     run(): Promise<void>;
     consume(): Promise<Replies.Consume>;

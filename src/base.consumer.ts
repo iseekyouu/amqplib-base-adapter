@@ -6,6 +6,11 @@ import { Connector } from './connector';
 import { createLogger, Logger } from './logger';
 import { Rmq } from './types';
 
+type Nack = {
+  allUpTo: boolean,
+  requeue: boolean,
+}
+
 interface BaseConsumerConfig {
   queue: string,
   exchange: string,
@@ -14,6 +19,7 @@ interface BaseConsumerConfig {
   prefetch: number
   rmq: Rmq,
   environment?: string,
+  nack?: Nack,
 }
 
 abstract class BaseConsumer extends Connector {
@@ -27,6 +33,8 @@ abstract class BaseConsumer extends Connector {
 
   private readonly prefetch: number;
 
+  public nack: Nack;
+
   constructor(config: BaseConsumerConfig) {
     super(config);
     this.queue = config.queue;
@@ -34,6 +42,10 @@ abstract class BaseConsumer extends Connector {
     this.exchangeType = config.exchangeType;
     this.routingKey = config.routingKey;
     this.prefetch = config.prefetch;
+    this.nack = config.nack || {
+      allUpTo: false,
+      requeue: true,
+    };
   }
 
   async run(): Promise<void> {
@@ -94,7 +106,7 @@ abstract class BaseConsumer extends Connector {
           content: message.content.toString(),
         });
 
-        await this.channel.nack(message);
+        await this.channel.nack(message, this.nack.allUpTo, this.nack.requeue);
       }
     });
   }
