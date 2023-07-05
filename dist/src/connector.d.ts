@@ -11,7 +11,9 @@ declare class Connector {
     environment?: string;
     protected connection: Connection | undefined;
     protected channel: Channel | any;
+    errorCode: string;
     constructor(config: ConnectorConfig);
+    connect(): Promise<void>;
     createConnection(): Promise<void>;
     createChannel(): Promise<any>;
 }

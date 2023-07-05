@@ -21,7 +21,6 @@ interface BaseConsumerConfig {
   environment?: string,
   nack?: Nack,
 }
-
 abstract class BaseConsumer extends Connector {
   private readonly queue: string;
 
@@ -46,11 +45,31 @@ abstract class BaseConsumer extends Connector {
       allUpTo: false,
       requeue: true,
     };
+
+    this.onClose = this.onClose.bind(this);
+    this.onError = this.onError.bind(this);
+  }
+
+  onClose() {
+    this.logger.error('RMQ connection closed, reconnecting', { errorCode: this.errorCode });
+    process.exit(1);
+  }
+
+  onError(error: any) {
+    this.logger.error('RMQ connection Error', error, { errorCode: this.errorCode });
+    process.exit(1);
   }
 
   async run(): Promise<void> {
-    await this.createConnection();
-    await this.createChannel();
+    await this.connect();
+
+    if (!this.connection) {
+      process.exit(1);
+    }
+
+    this.connection.once('error', this.onError);
+
+    this.connection.once('close', this.onClose);
 
     if (this.prefetch) {
       await this.channel.prefetch(this.prefetch);

@@ -23,6 +23,8 @@ declare abstract class BaseConsumer extends Connector {
     private readonly prefetch;
     nack: Nack;
     constructor(config: BaseConsumerConfig);
+    onClose(): void;
+    onError(error: any): void;
     run(): Promise<void>;
     consume(): Promise<Replies.Consume>;
     abstract handleMessage(content: unknown, message: Message): Promise<void>;

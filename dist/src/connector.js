@@ -14,10 +14,17 @@ const amqplib_1 = require("amqplib");
 const logger_1 = require("./logger");
 class Connector {
     constructor(config) {
+        this.errorCode = 'rabbit_connection_error';
         this.rmq = config.rmq;
         const level = config.environment === 'development' ?
             'debug' : 'error';
         this.logger = (0, logger_1.createLogger)(level);
+    }
+    connect() {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.createConnection();
+            yield this.createChannel();
+        });
     }
     createConnection() {
         return __awaiter(this, void 0, void 0, function* () {
@@ -30,15 +37,11 @@ class Connector {
                     username: this.rmq.username,
                     password: this.rmq.password,
                 });
-                connection.on('error', (error) => {
-                    this.logger.error(error);
-                    process.exit(1);
-                });
                 this.connection = connection;
             }
             catch (err) {
                 this.logger.error('[rabbitmq] Connection failed', err);
-                return this.createConnection();
+                return;
             }
         });
     }

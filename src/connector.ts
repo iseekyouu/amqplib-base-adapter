@@ -6,6 +6,7 @@ import {
 import { Logger, createLogger } from './logger';
 import { Rmq } from './types';
 
+
 interface ConnectorConfig {
   rmq: Rmq,
   environment?: string,
@@ -22,6 +23,8 @@ class Connector {
 
   protected channel: Channel | any;
 
+  errorCode = 'rabbit_connection_error';
+
   constructor(config: ConnectorConfig) {
     this.rmq = config.rmq;
 
@@ -29,6 +32,11 @@ class Connector {
       'debug' : 'error';
 
     this.logger = createLogger(level);
+  }
+
+  async connect() {
+    await this.createConnection();
+    await this.createChannel();
   }
 
   async createConnection(): Promise<void> {
@@ -42,15 +50,10 @@ class Connector {
         password: this.rmq.password,
       });
 
-      connection.on('error', (error: any) => {
-        this.logger.error(error);
-        process.exit(1);
-      });
-
       this.connection = connection;
     } catch (err) {
       this.logger.error('[rabbitmq] Connection failed', err);
-      return this.createConnection();
+      return;
     }
   }
 

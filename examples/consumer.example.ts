@@ -14,6 +14,10 @@ export const ConsumerExampleConfig: BaseConsumerConfig = {
     username: env.RMQ_CLUSTER_USERNAME,
   },
   environment: env.ENVIRONMENT,
+  nack: {
+    allUpTo: false,
+    requeue: false,
+  }
 };
 
 class ConsumerExample extends BaseConsumer {

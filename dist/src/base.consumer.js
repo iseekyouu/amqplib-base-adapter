@@ -23,11 +23,25 @@ class BaseConsumer extends connector_1.Connector {
             allUpTo: false,
             requeue: true,
         };
+        this.onClose = this.onClose.bind(this);
+        this.onError = this.onError.bind(this);
+    }
+    onClose() {
+        this.logger.error('RMQ connection closed, reconnecting', { errorCode: this.errorCode });
+        process.exit(1);
+    }
+    onError(error) {
+        this.logger.error('RMQ connection Error', error, { errorCode: this.errorCode });
+        process.exit(1);
     }
     run() {
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.createConnection();
-            yield this.createChannel();
+            yield this.connect();
+            if (!this.connection) {
+                process.exit(1);
+            }
+            this.connection.once('error', this.onError);
+            this.connection.once('close', this.onClose);
             if (this.prefetch) {
                 yield this.channel.prefetch(this.prefetch);
             }
