@@ -31,6 +31,7 @@
   },
   "homepage": "https://github.com/iseekyouu/amqplib-base-adapter#readme",
   "dependencies": {
+    "amqp-connection-manager": "^4.1.13",
     "amqplib": "^0.10.3",
     "winston": "^3.8.2"
   },

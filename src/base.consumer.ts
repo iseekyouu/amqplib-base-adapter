@@ -1,10 +1,7 @@
-import {
-  Message,
-  Replies,
-} from 'amqplib';
+import { Channel } from 'amqp-connection-manager';
 import { Connector } from './connector';
-import { createLogger, Logger } from './logger';
 import { Rmq } from './types';
+import { ConsumeMessage } from 'amqplib';
 
 type Nack = {
   allUpTo: boolean,
@@ -45,49 +42,43 @@ abstract class BaseConsumer extends Connector {
       allUpTo: false,
       requeue: true,
     };
-
-    this.onClose = this.onClose.bind(this);
-    this.onError = this.onError.bind(this);
   }
 
   onClose() {
     this.logger.error('RMQ connection closed, reconnecting', { errorCode: this.errorCode });
-    process.exit(1);
   }
 
   onError(error: any) {
     this.logger.error('RMQ connection Error', error, { errorCode: this.errorCode });
-    process.exit(1);
   }
 
   async run(): Promise<void> {
     await this.connect();
 
-    if (!this.connection) {
+    if (!this.connection || !this.channel) {
       process.exit(1);
     }
 
-    this.connection.once('error', this.onError);
+    this.connection.once('error', this.onError.bind(this));
+    this.connection.once('close', this.onClose.bind(this));
 
-    this.connection.once('close', this.onClose);
-
-    if (this.prefetch) {
-      await this.channel.prefetch(this.prefetch);
-    }
+    const prefetch = this.prefetch ? 1: 0;
 
     await this.channel.assertExchange(
       this.exchange,
       this.exchangeType,
       { durable: true },
     );
+
     this.logger.info(`Exchange ${this.exchange} asserted`);
 
-    await this.channel.assertQueue(this.queue, {
+    const r = await this.channel.assertQueue(this.queue, {
       arguments: {
         durable: true,
         'x-queue-type': 'quorum',
       },
     });
+
     this.logger.info(`Queue ${this.queue} asserted`);
 
     await this.channel.bindQueue(
@@ -97,42 +88,66 @@ abstract class BaseConsumer extends Connector {
     );
     this.logger.info(`${this.queue} bound to ${this.exchange}`);
 
-    await this.consume();
-  }
-
-  async consume(): Promise<Replies.Consume> {
-    return this.channel.consume(this.queue, async (message: Message) => {
-      if (message === null) {
-        return;
-      }
-
-      try {
-        const content = JSON.parse(message.content.toString());
-        this.logger.debug(JSON.stringify(content), {
-          type: 'amqp-message',
-          exchange: this.exchange,
-          queue: this.queue,
-          routingKey: this.routingKey,
-        });
-
-        await this.handleMessage(content, message);
-        await this.channel.ack(message);
-      } catch (err: any) {
-        this.logger.error(err, {
-          exchange: this.exchange,
-          queue: this.queue,
-          routingKey: this.routingKey,
-          content: message.content.toString(),
-        });
-
-        await this.channel.nack(message, this.nack.allUpTo, this.nack.requeue);
-      }
+    this.channel.consume(this.queue, this.onMessage.bind(this), {
+      prefetch,
     });
+
+    this.channel.addSetup(async (ch: Channel) => Promise.all([
+      ch.assertQueue(this.queue, {
+        arguments: {
+          durable: true,
+          'x-queue-type': 'quorum',
+        },
+      }),
+      ch.assertExchange(this.exchange, this.exchangeType, { durable: true }),
+      ch.bindQueue(
+        this.queue,
+        this.exchange,
+        this.routingKey,
+      ),
+      ch.consume(
+        this.queue,
+        this.onMessage.bind(this) as any,
+      ),
+      ch.prefetch(this.prefetch ? 1: 0)
+    ]));
   }
 
-  abstract handleMessage(content: unknown, message: Message): Promise<void>;
+  async onMessage(message: ConsumeMessage) {
+    if (message === null) {
+      return;
+    }
+
+    if (!this.channel) {
+      return;
+    }
+
+    try {
+      const content = JSON.parse(message.content.toString());
+      this.logger.debug(JSON.stringify(content), {
+        type: 'amqp-message',
+        exchange: this.exchange,
+        queue: this.queue,
+        routingKey: this.routingKey,
+      });
+
+      await this.handleMessage(content, message);
+      await this.channel.ack(message);
+    } catch (err: any) {
+      this.logger.error(err, {
+        exchange: this.exchange,
+        queue: this.queue,
+        routingKey: this.routingKey,
+        content: message.content.toString(),
+      });
+
+      await this.channel.nack(message, this.nack.allUpTo, this.nack.requeue);
+    }
+  }
+
+  abstract handleMessage(content: unknown, message: ConsumeMessage): Promise<void>;
 }
 
 export { BaseConsumer };
 
-export type { BaseConsumerConfig, Message };
+export type { BaseConsumerConfig, ConsumeMessage as Message};

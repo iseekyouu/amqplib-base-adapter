@@ -6,14 +6,13 @@ interface BaseProducerConfig {
     routingKey: string;
     rmq: Rmq;
     environment?: string;
+    reconnectDelay?: number;
 }
 declare abstract class BaseProducer extends Connector {
     private readonly exchangeType;
     protected readonly exchange: string;
     protected readonly routingKey: string;
-    attemp: number;
     constructor(config: BaseProducerConfig);
-    reconnect(): Promise<void>;
     onClose(): void;
     onError(error: any): void;
     run(): Promise<void>;

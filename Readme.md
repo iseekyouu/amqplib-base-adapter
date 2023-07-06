@@ -61,7 +61,7 @@ class ProducerExample extends BaseProducer {
       test: 'testdata1',
     }));
 
-    const result = this.channel?.publish(this.exchange, this.routingKey, message) as boolean;
+    const result = this.channel?.publish(this.exchange, this.routingKey, message);
     this.logger.info('[rabbitmq] publish result: ', { result, message });
     } catch (error) {
       this.logger.error('[ProducerExample] error publish messages', error);

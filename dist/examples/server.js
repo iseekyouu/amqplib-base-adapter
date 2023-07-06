@@ -32,7 +32,7 @@ class MyProducer extends src_1.BaseProducer {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 const message = Buffer.from(JSON.stringify({
-                    test: 'testdata1',
+                    test: 'testdata2',
                 }));
                 const result = (_a = this.channel) === null || _a === void 0 ? void 0 : _a.publish(this.exchange, this.routingKey, message);
                 this.logger.info('[rabbitmq] publish result: ', { result, message, r: this.routingKey, e: this.exchange });
@@ -50,4 +50,4 @@ app.get('/', function (req, res) {
         res.send('Hello World');
     });
 });
-app.listen(3018);
+app.listen(3018, () => console.log('listening on http://localhost:3018'));

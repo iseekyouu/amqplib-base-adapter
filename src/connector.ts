@@ -1,8 +1,4 @@
-import {
-  connect,
-  Connection,
-  Channel,
-} from 'amqplib';
+import ampq, { AmqpConnectionManager, ChannelWrapper } from 'amqp-connection-manager';
 import { Logger, createLogger } from './logger';
 import { Rmq } from './types';
 
@@ -19,9 +15,9 @@ class Connector {
 
   environment?: string;
 
-  protected connection: Connection | undefined;
+  protected connection: AmqpConnectionManager | null = null;
 
-  protected channel: Channel | any;
+  protected channel: ChannelWrapper | null = null;
 
   errorCode = 'rabbit_connection_error';
 
@@ -42,7 +38,7 @@ class Connector {
   async createConnection(): Promise<void> {
     try {
       this.logger.info('[rabbitmq] Connected');
-      const connection = await connect({
+      const connection = await ampq.connect({
         protocol: 'amqp',
         hostname: this.rmq.host,
         port: this.rmq.port,
@@ -59,7 +55,11 @@ class Connector {
 
   async createChannel() {
     if (this.connection) {
-      this.channel = await this.connection.createChannel();
+      this.channel = await this.connection.createChannel({
+        json: false,
+        confirm: true,
+      });
+
       this.logger.info('[rabbitmq] Channel created');
       return this.channel;
     }

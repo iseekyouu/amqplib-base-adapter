@@ -8,12 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Connector = void 0;
-const amqplib_1 = require("amqplib");
+const amqp_connection_manager_1 = __importDefault(require("amqp-connection-manager"));
 const logger_1 = require("./logger");
 class Connector {
     constructor(config) {
+        this.connection = null;
+        this.channel = null;
         this.errorCode = 'rabbit_connection_error';
         this.rmq = config.rmq;
         const level = config.environment === 'development' ?
@@ -30,7 +35,7 @@ class Connector {
         return __awaiter(this, void 0, void 0, function* () {
             try {
                 this.logger.info('[rabbitmq] Connected');
-                const connection = yield (0, amqplib_1.connect)({
+                const connection = yield amqp_connection_manager_1.default.connect({
                     protocol: 'amqp',
                     hostname: this.rmq.host,
                     port: this.rmq.port,
@@ -48,7 +53,10 @@ class Connector {
     createChannel() {
         return __awaiter(this, void 0, void 0, function* () {
             if (this.connection) {
-                this.channel = yield this.connection.createChannel();
+                this.channel = yield this.connection.createChannel({
+                    json: false,
+                    confirm: true,
+                });
                 this.logger.info('[rabbitmq] Channel created');
                 return this.channel;
             }
