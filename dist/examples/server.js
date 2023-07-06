@@ -9,15 +9,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConsumerExampleConfig = void 0;
-const base_consumer_1 = require("../src/base.consumer");
+exports.producerExampleConfig = void 0;
+const src_1 = require("../src");
 const config_1 = require("./config");
-exports.ConsumerExampleConfig = {
-    queue: 'example.queue',
+const express = require('express');
+const app = express();
+exports.producerExampleConfig = {
     exchange: 'example_exchange',
     exchangeType: 'topic',
     routingKey: 'example_route',
-    prefetch: 1,
     rmq: {
         host: config_1.env.RMQ_CLUSTER_ADDRESS,
         password: config_1.env.RMQ_CLUSTER_PASSWORD,
@@ -25,22 +25,29 @@ exports.ConsumerExampleConfig = {
         username: config_1.env.RMQ_CLUSTER_USERNAME,
     },
     environment: config_1.env.ENVIRONMENT,
-    nack: {
-        allUpTo: false,
-        requeue: false,
-    }
 };
-class ConsumerExample extends base_consumer_1.BaseConsumer {
-    handleMessage(message) {
+class MyProducer extends src_1.BaseProducer {
+    publish() {
+        var _a;
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                this.logger.info({ message });
+                const message = Buffer.from(JSON.stringify({
+                    test: 'testdata2',
+                }));
+                const result = (_a = this.channel) === null || _a === void 0 ? void 0 : _a.publish(this.exchange, this.routingKey, message);
+                this.logger.info('[rabbitmq] publish result: ', { result, message, r: this.routingKey, e: this.exchange });
             }
-            catch (err) {
-                this.logger.error('Reactivation consumer error handle message', err);
+            catch (error) {
+                this.logger.error('[ProducerExample] error publish messages', error);
             }
         });
     }
 }
-const consumerExample = new ConsumerExample(exports.ConsumerExampleConfig);
-void consumerExample.run();
+app.get('/', function (req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const my = new MyProducer(exports.producerExampleConfig);
+        const result = yield my.run();
+        res.send('Hello World');
+    });
+});
+app.listen(3018, () => console.log('listening on http://localhost:3018'));

@@ -1,6 +1,4 @@
-import { Channel, connect, Connection } from 'amqplib';
 import { Connector } from './connector';
-import { createLogger, format, Logger, transports } from 'winston';
 import { Rmq } from './types';
 
 interface BaseProducerConfig {
@@ -9,6 +7,7 @@ interface BaseProducerConfig {
   routingKey: string,
   rmq: Rmq,
   environment?: string,
+  reconnectDelay?: number,
 }
 
 abstract class BaseProducer extends Connector {
@@ -17,9 +16,7 @@ abstract class BaseProducer extends Connector {
   protected readonly exchange: string;
 
   protected readonly routingKey: string;
-
-
-   constructor(config: BaseProducerConfig) {
+  constructor(config: BaseProducerConfig) {
     super(config);
 
     this.exchange = config.exchange;
@@ -27,9 +24,23 @@ abstract class BaseProducer extends Connector {
     this.routingKey = config.routingKey;
   }
 
+  onClose() {
+    this.logger.error('RMQ connection closed, reconnecting', { errorCode: this.errorCode });
+  }
+
+  onError(error: any) {
+    this.logger.error('RMQ connection Error', error, { errorCode: this.errorCode });
+  }
+
   async run(): Promise<void> {
-    await this.createConnection();
-    await this.createChannel();
+    await this.connect();
+
+    if (!this.connection || !this.channel) {
+      return;
+    }
+
+    this.connection.once('error', this.onError.bind(this));
+    this.connection.once('close', this.onClose.bind(this));
 
     await this.channel.assertExchange(
       this.exchange,
@@ -40,9 +51,6 @@ abstract class BaseProducer extends Connector {
     this.logger.info(`Exchange ${this.exchange} asserted`);
 
     await this.publish();
-
-    await this.channel.close();
-    await this.connection?.close();
   }
 
   abstract publish(): Promise<void>;

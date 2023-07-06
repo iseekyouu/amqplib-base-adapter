@@ -1,6 +1,6 @@
-import { Message, Replies } from 'amqplib';
 import { Connector } from './connector';
 import { Rmq } from './types';
+import { ConsumeMessage } from 'amqplib';
 declare type Nack = {
     allUpTo: boolean;
     requeue: boolean;
@@ -23,9 +23,11 @@ declare abstract class BaseConsumer extends Connector {
     private readonly prefetch;
     nack: Nack;
     constructor(config: BaseConsumerConfig);
+    onClose(): void;
+    onError(error: any): void;
     run(): Promise<void>;
-    consume(): Promise<Replies.Consume>;
-    abstract handleMessage(content: unknown, message: Message): Promise<void>;
+    onMessage(message: ConsumeMessage): Promise<void>;
+    abstract handleMessage(content: unknown, message: ConsumeMessage): Promise<void>;
 }
 export { BaseConsumer };
-export type { BaseConsumerConfig, Message };
+export type { BaseConsumerConfig, ConsumeMessage as Message };

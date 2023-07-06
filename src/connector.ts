@@ -1,10 +1,7 @@
-import {
-  connect,
-  Connection,
-  Channel,
-} from 'amqplib';
+import ampq, { AmqpConnectionManager, ChannelWrapper } from 'amqp-connection-manager';
 import { Logger, createLogger } from './logger';
 import { Rmq } from './types';
+
 
 interface ConnectorConfig {
   rmq: Rmq,
@@ -18,9 +15,11 @@ class Connector {
 
   environment?: string;
 
-  protected connection: Connection | undefined;
+  protected connection: AmqpConnectionManager | null = null;
 
-  protected channel: Channel | any;
+  protected channel: ChannelWrapper | null = null;
+
+  errorCode = 'rabbit_connection_error';
 
   constructor(config: ConnectorConfig) {
     this.rmq = config.rmq;
@@ -31,10 +30,15 @@ class Connector {
     this.logger = createLogger(level);
   }
 
+  async connect() {
+    await this.createConnection();
+    await this.createChannel();
+  }
+
   async createConnection(): Promise<void> {
     try {
       this.logger.info('[rabbitmq] Connected');
-      const connection = await connect({
+      const connection = await ampq.connect({
         protocol: 'amqp',
         hostname: this.rmq.host,
         port: this.rmq.port,
@@ -42,21 +46,20 @@ class Connector {
         password: this.rmq.password,
       });
 
-      connection.on('error', (error: any) => {
-        this.logger.error(error);
-        process.exit(1);
-      });
-
       this.connection = connection;
     } catch (err) {
       this.logger.error('[rabbitmq] Connection failed', err);
-      return this.createConnection();
+      return;
     }
   }
 
   async createChannel() {
     if (this.connection) {
-      this.channel = await this.connection.createChannel();
+      this.channel = await this.connection.createChannel({
+        json: false,
+        confirm: true,
+      });
+
       this.logger.info('[rabbitmq] Channel created');
       return this.channel;
     }

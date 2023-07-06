@@ -18,16 +18,23 @@ class BaseProducer extends connector_1.Connector {
         this.exchangeType = config.exchangeType;
         this.routingKey = config.routingKey;
     }
+    onClose() {
+        this.logger.error('RMQ connection closed, reconnecting', { errorCode: this.errorCode });
+    }
+    onError(error) {
+        this.logger.error('RMQ connection Error', error, { errorCode: this.errorCode });
+    }
     run() {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
-            yield this.createConnection();
-            yield this.createChannel();
+            yield this.connect();
+            if (!this.connection || !this.channel) {
+                return;
+            }
+            this.connection.once('error', this.onError.bind(this));
+            this.connection.once('close', this.onClose.bind(this));
             yield this.channel.assertExchange(this.exchange, this.exchangeType, { durable: true });
             this.logger.info(`Exchange ${this.exchange} asserted`);
             yield this.publish();
-            yield this.channel.close();
-            yield ((_a = this.connection) === null || _a === void 0 ? void 0 : _a.close());
         });
     }
 }

@@ -1,7 +1,10 @@
-import { BaseProducer, BaseProducerConfig } from '../src/base.producer';
+import { BaseProducer } from '../src'
 import { env } from './config';
 
-export const ProducerExampleConfig: BaseProducerConfig = {
+const express = require('express')
+const app = express()
+
+export const producerExampleConfig = {
   exchange: 'example_exchange',
   exchangeType: 'topic',
   routingKey: 'example_route',
@@ -14,20 +17,25 @@ export const ProducerExampleConfig: BaseProducerConfig = {
   environment: env.ENVIRONMENT,
 };
 
-class ProducerExample extends BaseProducer {
+class MyProducer extends BaseProducer {
   async publish() {
     try {
     const message: Buffer = Buffer.from(JSON.stringify({
-      test: 'testdata1',
+      test: 'testdata2',
     }));
 
     const result = this.channel?.publish(this.exchange, this.routingKey, message);
-    this.logger.info('[rabbitmq] publish result: ', { result, message });
+    this.logger.info('[rabbitmq] publish result: ', { result, message, r: this.routingKey, e: this.exchange });
     } catch (error) {
       this.logger.error('[ProducerExample] error publish messages', error);
     }
   }
 }
 
-const producerExample = new ProducerExample(ProducerExampleConfig);
-void producerExample.run();
+app.get('/', async function (req: any, res: any) {
+  const my = new MyProducer(producerExampleConfig);
+  const result = await my.run();
+  res.send('Hello World')
+})
+
+app.listen(3018, () => console.log('listening on http://localhost:3018'))
