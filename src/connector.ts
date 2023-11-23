@@ -2,7 +2,6 @@ import ampq, { AmqpConnectionManager, ChannelWrapper } from 'amqp-connection-man
 import { Logger, createLogger } from './logger';
 import { Rmq } from './types';
 
-
 interface ConnectorConfig {
   rmq: Rmq,
   environment?: string,
@@ -20,6 +19,8 @@ class Connector {
   protected channel: ChannelWrapper | null = null;
 
   errorCode = 'rabbit_connection_error';
+
+  onConnectionFailed?(error: Error): void;
 
   constructor(config: ConnectorConfig) {
     this.rmq = config.rmq;
@@ -47,6 +48,9 @@ class Connector {
       });
 
       this.connection = connection;
+      if (this.onConnectionFailed) {
+        this.connection.on('connectFailed', this.onConnectionFailed.bind(this));
+      }
     } catch (err) {
       this.logger.error('[rabbitmq] Connection failed', err);
       return;
@@ -69,4 +73,4 @@ class Connector {
 }
 
 
-export { Connector };
+export { Connector, ConnectorConfig };

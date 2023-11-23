@@ -9,7 +9,6 @@
     "dist/"
   ],
   "scripts": {
-    "test": "test",
     "build": "tsc -b",
     "push": "yarn build && yarn publish",
     "consumer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/consumer.example.js",
@@ -31,11 +30,12 @@
   },
   "homepage": "https://github.com/iseekyouu/amqplib-base-adapter#readme",
   "dependencies": {
-    "amqp-connection-manager": "^4.1.13",
+    "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.3",
     "winston": "^3.8.2"
   },
   "devDependencies": {
+    "@types/amqp-connection-manager": "^3.4.1",
     "@types/amqplib": "^0.10.1",
     "@types/express": "^4.17.17",
     "express": "^4.18.2"

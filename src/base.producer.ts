@@ -1,13 +1,9 @@
-import { Connector } from './connector';
-import { Rmq } from './types';
+import { Connector, ConnectorConfig } from './connector';
 
-interface BaseProducerConfig {
+interface BaseProducerConfig extends ConnectorConfig {
   exchange: string,
   exchangeType: string,
   routingKey: string,
-  rmq: Rmq,
-  environment?: string,
-  reconnectDelay?: number,
 }
 
 abstract class BaseProducer extends Connector {
