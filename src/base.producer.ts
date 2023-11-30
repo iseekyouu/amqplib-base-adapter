@@ -20,23 +20,12 @@ abstract class BaseProducer extends Connector {
     this.routingKey = config.routingKey;
   }
 
-  onClose() {
-    this.logger.error('RMQ connection closed, reconnecting', { errorCode: this.errorCode });
-  }
-
-  onError(error: any) {
-    this.logger.error('RMQ connection Error', error, { errorCode: this.errorCode });
-  }
-
   async run(): Promise<void> {
     await this.connect();
 
     if (!this.connection || !this.channel) {
       return;
     }
-
-    this.connection.once('error', this.onError.bind(this));
-    this.connection.once('close', this.onClose.bind(this));
 
     await this.channel.assertExchange(
       this.exchange,

@@ -20,8 +20,6 @@ class Connector {
 
   errorCode = 'rabbit_connection_error';
 
-  onConnectionFailed?(error: Error): void;
-
   constructor(config: ConnectorConfig) {
     this.rmq = config.rmq;
 
@@ -29,6 +27,18 @@ class Connector {
       'debug' : 'error';
 
     this.logger = createLogger(level);
+  }
+
+  onClose() {
+    this.logger.error('[rabbitmq] Connection closed, reconnecting', { errorCode: this.errorCode });
+  }
+
+  onError(error: any) {
+    this.logger.error('[rabbitmq] Connection error', error, { errorCode: this.errorCode });
+  }
+
+  onConnectionFailed(error: Error) {
+    this.logger.error('[rabbitmq] Connection failed:', error, { errorCode: this.errorCode });
   }
 
   async connect() {
@@ -48,9 +58,10 @@ class Connector {
       });
 
       this.connection = connection;
-      if (this.onConnectionFailed) {
-        this.connection.on('connectFailed', this.onConnectionFailed.bind(this));
-      }
+
+      this.connection.once('error', this.onError.bind(this));
+      this.connection.once('close', this.onClose.bind(this));
+      this.connection.on('connectFailed', this.onConnectionFailed.bind(this));
     } catch (err) {
       this.logger.error('[rabbitmq] Connection failed', err);
       return;
@@ -68,7 +79,7 @@ class Connector {
       return this.channel;
     }
 
-    this.logger.error('[rabbitmq] must be connected');
+    this.logger.error('[rabbitmq] Must be connected');
   }
 }
 
