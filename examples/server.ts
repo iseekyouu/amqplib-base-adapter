@@ -25,10 +25,18 @@ class MyProducer extends BaseProducer {
       }));
 
       const result = this.channel?.publish(this.exchange, this.routingKey, message);
-      this.logger.info('[rabbitmq] publish result: ', { result, message, r: this.routingKey, e: this.exchange });
+      this.logger.info('[MyProducer] publish result: ', { result, message, r: this.routingKey, e: this.exchange });
     } catch (error) {
       this.logger.error('[MyProducer] error publish messages', error);
     }
+  }
+
+  onClose() {
+    this.logger.error('[MyProducer] Connection closed, reconnecting', { errorCode: this.errorCode });
+  }
+
+  onError(error: any) {
+    this.logger.error('[MyProducer] Connection error', error, { errorCode: this.errorCode });
   }
 
   onConnectionFailed(error: Error) {

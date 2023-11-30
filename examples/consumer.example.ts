@@ -25,8 +25,16 @@ class ConsumerExample extends BaseConsumer {
     try {
       this.logger.info({ message });
     } catch (err) {
-      this.logger.error('[ConsumerExample] Reactivation consumer error handle message', err);
+      this.logger.error('[ConsumerExample] error handle message', err);
     }
+  }
+
+  onClose() {
+    this.logger.error('[ConsumerExample] Connection closed, reconnecting', { errorCode: this.errorCode });
+  }
+
+  onError(error: any) {
+    this.logger.error('[ConsumerExample] Connection error', error, { errorCode: this.errorCode });
   }
 
   onConnectionFailed(error: Error) {

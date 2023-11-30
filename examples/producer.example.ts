@@ -22,10 +22,18 @@ class ProducerExample extends BaseProducer {
       }));
 
       const result = this.channel?.publish(this.exchange, this.routingKey, message);
-      this.logger.info('[rabbitmq] publish result: ', { result, message });
+      this.logger.info('[ProducerExample] publish result: ', { result, message });
     } catch (error) {
       this.logger.error('[ProducerExample] error publish messages', error);
     }
+  }
+
+  onClose() {
+    this.logger.error('[ProducerExample] Connection closed, reconnecting', { errorCode: this.errorCode });
+  }
+
+  onError(error: any) {
+    this.logger.error('[ProducerExample] Connection error', error, { errorCode: this.errorCode });
   }
 
   onConnectionFailed(error: Error) {
