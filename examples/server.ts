@@ -20,15 +20,27 @@ export const producerExampleConfig = {
 class MyProducer extends BaseProducer {
   async publish() {
     try {
-    const message: Buffer = Buffer.from(JSON.stringify({
-      test: 'testdata2',
-    }));
+      const message: Buffer = Buffer.from(JSON.stringify({
+        test: 'testdata2',
+      }));
 
-    const result = this.channel?.publish(this.exchange, this.routingKey, message);
-    this.logger.info('[rabbitmq] publish result: ', { result, message, r: this.routingKey, e: this.exchange });
+      const result = this.channel?.publish(this.exchange, this.routingKey, message);
+      this.logger.info('[MyProducer] publish result: ', { result, message, r: this.routingKey, e: this.exchange });
     } catch (error) {
-      this.logger.error('[ProducerExample] error publish messages', error);
+      this.logger.error('[MyProducer] error publish messages', error);
     }
+  }
+
+  onClose() {
+    this.logger.error('[MyProducer] Connection closed, reconnecting', { errorCode: this.errorCode });
+  }
+
+  onError(error: any) {
+    this.logger.error('[MyProducer] Connection error', error, { errorCode: this.errorCode });
+  }
+
+  onConnectionFailed(error: Error) {
+    this.logger.error('[MyProducer] Connection failed:', error);
   }
 }
 

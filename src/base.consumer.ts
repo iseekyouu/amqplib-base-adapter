@@ -1,6 +1,5 @@
 import { Channel } from 'amqp-connection-manager';
-import { Connector } from './connector';
-import { Rmq } from './types';
+import { Connector, ConnectorConfig } from './connector';
 import { ConsumeMessage } from 'amqplib';
 
 type Nack = {
@@ -8,16 +7,15 @@ type Nack = {
   requeue: boolean,
 }
 
-interface BaseConsumerConfig {
+interface BaseConsumerConfig extends ConnectorConfig {
   queue: string,
   exchange: string,
   exchangeType: string,
   routingKey: string,
   prefetch: number
-  rmq: Rmq,
-  environment?: string,
   nack?: Nack,
 }
+
 abstract class BaseConsumer extends Connector {
   private readonly queue: string;
 
@@ -44,25 +42,12 @@ abstract class BaseConsumer extends Connector {
     };
   }
 
-  onClose() {
-    this.logger.error('RMQ connection closed, reconnecting', { errorCode: this.errorCode });
-  }
-
-  onError(error: any) {
-    this.logger.error('RMQ connection Error', error, { errorCode: this.errorCode });
-  }
-
   async run(): Promise<void> {
     await this.connect();
 
     if (!this.connection || !this.channel) {
       process.exit(1);
     }
-
-    this.connection.once('error', this.onError.bind(this));
-    this.connection.once('close', this.onClose.bind(this));
-
-    const prefetch = this.prefetch ? 1: 0;
 
     await this.channel.assertExchange(
       this.exchange,
@@ -88,6 +73,8 @@ abstract class BaseConsumer extends Connector {
     );
     this.logger.info(`${this.queue} bound to ${this.exchange}`);
 
+    const prefetch = this.prefetch ? 1 : 0;
+
     this.channel.consume(this.queue, this.onMessage.bind(this), {
       prefetch,
     });
@@ -109,7 +96,7 @@ abstract class BaseConsumer extends Connector {
         this.queue,
         this.onMessage.bind(this) as any,
       ),
-      ch.prefetch(this.prefetch ? 1: 0)
+      ch.prefetch(prefetch)
     ]));
   }
 
@@ -150,4 +137,4 @@ abstract class BaseConsumer extends Connector {
 
 export { BaseConsumer };
 
-export type { BaseConsumerConfig, ConsumeMessage as Message};
+export type { BaseConsumerConfig, ConsumeMessage as Message };

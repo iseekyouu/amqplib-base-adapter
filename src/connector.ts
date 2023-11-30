@@ -2,7 +2,6 @@ import ampq, { AmqpConnectionManager, ChannelWrapper } from 'amqp-connection-man
 import { Logger, createLogger } from './logger';
 import { Rmq } from './types';
 
-
 interface ConnectorConfig {
   rmq: Rmq,
   environment?: string,
@@ -30,6 +29,18 @@ class Connector {
     this.logger = createLogger(level);
   }
 
+  onClose() {
+    this.logger.error('[rabbitmq] Connection closed, reconnecting', { errorCode: this.errorCode });
+  }
+
+  onError(error: any) {
+    this.logger.error('[rabbitmq] Connection error', error, { errorCode: this.errorCode });
+  }
+
+  onConnectionFailed(error: Error) {
+    this.logger.error('[rabbitmq] Connection failed:', error, { errorCode: this.errorCode });
+  }
+
   async connect() {
     await this.createConnection();
     await this.createChannel();
@@ -47,6 +58,10 @@ class Connector {
       });
 
       this.connection = connection;
+
+      this.connection.once('error', this.onError.bind(this));
+      this.connection.once('close', this.onClose.bind(this));
+      this.connection.on('connectFailed', this.onConnectionFailed.bind(this));
     } catch (err) {
       this.logger.error('[rabbitmq] Connection failed', err);
       return;
@@ -64,9 +79,9 @@ class Connector {
       return this.channel;
     }
 
-    this.logger.error('[rabbitmq] must be connected');
+    this.logger.error('[rabbitmq] Must be connected');
   }
 }
 
 
-export { Connector };
+export { Connector, ConnectorConfig };

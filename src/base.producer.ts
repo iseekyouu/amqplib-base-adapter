@@ -1,13 +1,9 @@
-import { Connector } from './connector';
-import { Rmq } from './types';
+import { Connector, ConnectorConfig } from './connector';
 
-interface BaseProducerConfig {
+interface BaseProducerConfig extends ConnectorConfig {
   exchange: string,
   exchangeType: string,
   routingKey: string,
-  rmq: Rmq,
-  environment?: string,
-  reconnectDelay?: number,
 }
 
 abstract class BaseProducer extends Connector {
@@ -24,23 +20,12 @@ abstract class BaseProducer extends Connector {
     this.routingKey = config.routingKey;
   }
 
-  onClose() {
-    this.logger.error('RMQ connection closed, reconnecting', { errorCode: this.errorCode });
-  }
-
-  onError(error: any) {
-    this.logger.error('RMQ connection Error', error, { errorCode: this.errorCode });
-  }
-
   async run(): Promise<void> {
     await this.connect();
 
     if (!this.connection || !this.channel) {
       return;
     }
-
-    this.connection.once('error', this.onError.bind(this));
-    this.connection.once('close', this.onClose.bind(this));
 
     await this.channel.assertExchange(
       this.exchange,
