@@ -75,11 +75,11 @@ abstract class BaseConsumer extends Connector {
 
     const prefetch = this.prefetch ? 1 : 0;
 
-    this.channel.consume(this.queue, this.onMessage.bind(this), {
+    await this.channel.consume(this.queue, this.onMessage.bind(this), {
       prefetch,
     });
 
-    this.channel.addSetup(async (ch: Channel) => Promise.all([
+    await this.channel.addSetup(async (ch: Channel) => Promise.all([
       ch.assertQueue(this.queue, {
         arguments: {
           durable: true,
