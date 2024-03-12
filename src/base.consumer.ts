@@ -49,36 +49,6 @@ abstract class BaseConsumer extends Connector {
       process.exit(1);
     }
 
-    await this.channel.assertExchange(
-      this.exchange,
-      this.exchangeType,
-      { durable: true },
-    );
-
-    this.logger.info(`Exchange ${this.exchange} asserted`);
-
-    const r = await this.channel.assertQueue(this.queue, {
-      arguments: {
-        durable: true,
-        'x-queue-type': 'quorum',
-      },
-    });
-
-    this.logger.info(`Queue ${this.queue} asserted`);
-
-    await this.channel.bindQueue(
-      this.queue,
-      this.exchange,
-      this.routingKey,
-    );
-    this.logger.info(`${this.queue} bound to ${this.exchange}`);
-
-    const prefetch = this.prefetch ? 1 : 0;
-
-    await this.channel.consume(this.queue, this.onMessage.bind(this), {
-      prefetch,
-    });
-
     await this.channel.addSetup(async (ch: Channel) => Promise.all([
       ch.assertQueue(this.queue, {
         arguments: {
@@ -87,6 +57,7 @@ abstract class BaseConsumer extends Connector {
         },
       }),
       ch.assertExchange(this.exchange, this.exchangeType, { durable: true }),
+      ch.prefetch(this.prefetch ? 1 : 0),
       ch.bindQueue(
         this.queue,
         this.exchange,
@@ -96,7 +67,6 @@ abstract class BaseConsumer extends Connector {
         this.queue,
         this.onMessage.bind(this) as any,
       ),
-      ch.prefetch(prefetch)
     ]));
   }
 
