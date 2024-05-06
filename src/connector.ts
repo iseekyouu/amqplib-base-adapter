@@ -41,6 +41,14 @@ class Connector {
     this.logger.error('[rabbitmq] Connection failed:', error, { errorCode: this.errorCode });
   }
 
+  onBlocked(error: Error) {
+    this.logger.error('[rabbitmq] Connection blocked:', error, { errorCode: this.errorCode });
+  }
+
+  onDisconnected(error: Error) {
+    this.logger.error('[rabbitmq] Connection disconnected:', error, { errorCode: this.errorCode });
+  }
+
   async connect() {
     await this.createConnection();
     await this.createChannel();
@@ -62,6 +70,8 @@ class Connector {
       this.connection.once('error', this.onError.bind(this));
       this.connection.once('close', this.onClose.bind(this));
       this.connection.on('connectFailed', this.onConnectionFailed.bind(this));
+      this.connection.on('blocked', this.onBlocked.bind(this));
+      this.connection.on('disconnect', this.onDisconnected.bind(this));
     } catch (err) {
       this.logger.error('[rabbitmq] Connection failed', err);
       return;
