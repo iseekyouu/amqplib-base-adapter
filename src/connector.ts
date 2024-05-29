@@ -3,7 +3,7 @@ import { Logger, createLogger } from './logger';
 import { Rmq } from './types';
 
 interface ConnectorConfig {
-  rmq: Rmq,
+  rmq: Rmq | Rmq[],
   environment?: string,
 }
 
