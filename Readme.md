@@ -5,8 +5,30 @@ With all connection logic and logs!
 
 As logger it uses winston.
 
-
 You can find producer and consumer example in /examples directory
+
+## Config
+In the `BaseConsumerConfig` and `BaseProducerConfig` you could pass an array or an object to `rmq`
+```typescript
+const ExampleConfig = {
+  ...
+  rmq: [
+    {
+      host: env.RMQ_CLUSTER_ADDRESS_1,
+      password: env.RMQ_CLUSTER_PASSWORD_1,
+      port: env.RMQ_CLUSTER_PORT_1,
+      username: env.RMQ_CLUSTER_USERNAME_1,
+    },
+    {
+      host: env.RMQ_CLUSTER_ADDRESS_2,
+      password: env.RMQ_CLUSTER_PASSWORD_2,
+      port: env.RMQ_CLUSTER_PORT_2,
+      username: env.RMQ_CLUSTER_USERNAME_2,
+    },
+  ],
+  ...
+};
+```
 
 ## Consumer example
 ```typescript

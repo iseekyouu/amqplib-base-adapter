@@ -1,4 +1,4 @@
-import ampq, { AmqpConnectionManager, ChannelWrapper } from 'amqp-connection-manager';
+import ampq, { AmqpConnectionManager, ChannelWrapper, ConnectionUrl } from 'amqp-connection-manager';
 import { Logger, createLogger } from './logger';
 import { Rmq } from './types';
 
@@ -10,7 +10,7 @@ interface ConnectorConfig {
 class Connector {
   protected logger: Logger;
 
-  private readonly rmq: Rmq;
+  private readonly rmq: Rmq | Rmq[];
 
   environment?: string;
 
@@ -27,6 +27,24 @@ class Connector {
       'debug' : 'error';
 
     this.logger = createLogger(level);
+  }
+
+  private getUrls(): ConnectionUrl[] {
+    return Array.isArray(this.rmq)
+      ? this.rmq.map((rmq) => ({
+        protocol: 'amqp',
+        hostname: rmq.host,
+        port: rmq.port,
+        username: rmq.username,
+        password: rmq.password,
+      }))
+      : [{
+        protocol: 'amqp',
+        hostname: this.rmq.host,
+        port: this.rmq.port,
+        username: this.rmq.username,
+        password: this.rmq.password,
+      }];
   }
 
   onClose() {
@@ -57,13 +75,8 @@ class Connector {
   async createConnection(): Promise<void> {
     try {
       this.logger.info('[rabbitmq] Connected');
-      const connection = await ampq.connect({
-        protocol: 'amqp',
-        hostname: this.rmq.host,
-        port: this.rmq.port,
-        username: this.rmq.username,
-        password: this.rmq.password,
-      });
+      const urls = this.getUrls();
+      const connection = await ampq.connect(urls);
 
       this.connection = connection;
 
