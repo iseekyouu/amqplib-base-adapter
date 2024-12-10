@@ -20,7 +20,7 @@ abstract class BaseProducer extends Connector {
     this.routingKey = config.routingKey;
   }
 
-  async establishConnection(): Promise<void> {
+  async run(): Promise<void> {
     await this.connect();
 
     if (!this.connection || !this.channel) {
@@ -34,35 +34,11 @@ abstract class BaseProducer extends Connector {
     );
 
     this.logger.info(`Exchange ${this.exchange} asserted`);
-  }
 
-  // single send
-  async run(): Promise<void> {
-    await this.establishConnection();
     await this.publish();
-    await this.stop();
   }
 
   abstract publish(): Promise<void>;
-
-  async send(payload: string): Promise<boolean> {
-    try {
-      const message = Buffer.from(JSON.stringify(payload));
-      if (message) {
-        await this.channel?.publish(this.exchange, this.routingKey, message);
-      }
-
-      return true;
-    } catch (error) {
-      this.logger.error(error);
-      return false;
-    }
-  }
-
-  async stop(): Promise<void> {
-    await this.channel?.close();
-    await this.connection?.close();
-  }
 }
 
 export { BaseProducer }
