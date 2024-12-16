@@ -45,9 +45,9 @@ abstract class BaseProducer extends Connector {
 
   abstract publish(): Promise<void>;
 
-  async send(payload: string): Promise<boolean> {
+  async send(payload: any): Promise<boolean> {
     try {
-      const message = Buffer.from(payload);
+      const message = Buffer.from(JSON.stringify(payload));
       if (message) {
         await this.channel?.publish(this.exchange, this.routingKey, message);
       }
