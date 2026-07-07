@@ -43,7 +43,7 @@ abstract class BaseConsumer extends Connector {
   }
 
   async run(): Promise<void> {
-    await this.connect();
+    this.connect();
 
     if (!this.connection || !this.channel) {
       process.exit(1);
@@ -65,12 +65,12 @@ abstract class BaseConsumer extends Connector {
       ),
       ch.consume(
         this.queue,
-        this.onMessage.bind(this) as any,
+        (message) => { void this.onMessage(message); },
       ),
     ]));
   }
 
-  async onMessage(message: ConsumeMessage) {
+  async onMessage(message: ConsumeMessage | null) {
     if (message === null) {
       return;
     }
@@ -89,7 +89,7 @@ abstract class BaseConsumer extends Connector {
       });
 
       await this.handleMessage(content, message);
-      await this.channel.ack(message);
+      this.channel.ack(message);
     } catch (err: any) {
       this.logger.error(err, {
         exchange: this.exchange,
@@ -98,7 +98,7 @@ abstract class BaseConsumer extends Connector {
         content: message.content.toString(),
       });
 
-      await this.channel.nack(message, this.nack.allUpTo, this.nack.requeue);
+      this.channel.nack(message, this.nack.allUpTo, this.nack.requeue);
     }
   }
 

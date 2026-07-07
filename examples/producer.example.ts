@@ -21,7 +21,7 @@ class ProducerExample extends BaseProducer {
         test: 'testdata1',
       }));
 
-      const result = this.channel?.publish(this.exchange, this.routingKey, message);
+      const result = await this.channel?.publish(this.exchange, this.routingKey, message);
       this.logger.info('[ProducerExample] publish result: ', { result, message });
     } catch (error) {
       this.logger.error('[ProducerExample] error publish messages', error);
