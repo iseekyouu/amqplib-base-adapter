@@ -67,18 +67,16 @@ class Connector {
     this.logger.error('[rabbitmq] Connection disconnected:', error, { errorCode: this.errorCode });
   }
 
-  async connect() {
-    await this.createConnection();
-    await this.createChannel();
+  connect() {
+    this.createConnection();
+    this.createChannel();
   }
 
-  async createConnection(): Promise<void> {
+  createConnection(): void {
     try {
       this.logger.info('[rabbitmq] Connected');
       const urls = this.getUrls();
-      const connection = await ampq.connect(urls);
-
-      this.connection = connection;
+      this.connection = ampq.connect(urls);
 
       this.connection.once('error', this.onError.bind(this));
       this.connection.once('close', this.onClose.bind(this));
@@ -91,9 +89,9 @@ class Connector {
     }
   }
 
-  async createChannel() {
+  createChannel() {
     if (this.connection) {
-      this.channel = await this.connection.createChannel({
+      this.channel = this.connection.createChannel({
         json: false,
         confirm: true,
       });

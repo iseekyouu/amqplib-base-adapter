@@ -21,7 +21,7 @@ abstract class BaseProducer extends Connector {
   }
 
   async establishConnection(): Promise<void> {
-    await this.connect();
+    this.connect();
 
     if (!this.connection || !this.channel) {
       return;
