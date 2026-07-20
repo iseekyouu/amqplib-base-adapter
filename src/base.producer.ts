@@ -20,20 +20,29 @@ abstract class BaseProducer extends Connector {
     this.routingKey = config.routingKey;
   }
 
-  async establishConnection(): Promise<void> {
+  async establishConnection({ exchange, exchangeType, durable = true }: { exchange?: string, exchangeType?: string, durable?: boolean } = {}): Promise<void> {
     this.connect();
 
     if (!this.connection || !this.channel) {
       return;
     }
 
+    await this.channel.waitForConnect();
     await this.channel.assertExchange(
-      this.exchange,
-      this.exchangeType,
-      { durable: true },
+      exchange ?? this.exchange,
+      exchangeType ?? this.exchangeType,
+      { durable: Boolean(durable) },
     );
 
     this.logger.info(`Exchange ${this.exchange} asserted`);
+  }
+
+  async ensureConnection({ exchange, exchangeType, durable = true }: { exchange?: string, exchangeType?: string, durable?: boolean } = {}): Promise<void> {
+    if (this.connection && this.channel) {
+      return;
+    }
+
+    return this.establishConnection({ exchange, exchangeType, durable });
   }
 
   // single send
@@ -45,16 +54,21 @@ abstract class BaseProducer extends Connector {
 
   abstract publish(): Promise<void>;
 
-  async send(payload: any): Promise<boolean> {
+  async onSendError(error: unknown): Promise<void> {
+    return;
+  }
+
+  async send(payload: any, {exchange, routingKey}: {exchange?: string, routingKey?: string} = {}): Promise<boolean> {
     try {
       const message = Buffer.from(JSON.stringify(payload));
       if (message) {
-        await this.channel?.publish(this.exchange, this.routingKey, message);
+        await this.channel?.publish(exchange ?? this.exchange, routingKey ?? this.routingKey, message);
       }
 
       return true;
     } catch (error) {
       this.logger.error(error);
+      await this.onSendError(error);
       return false;
     }
   }

@@ -89,7 +89,7 @@ class Connector {
     }
   }
 
-  createChannel() {
+  createChannel(): ChannelWrapper | undefined {
     if (this.connection) {
       this.channel = this.connection.createChannel({
         json: false,

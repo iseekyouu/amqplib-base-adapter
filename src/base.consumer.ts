@@ -70,6 +70,14 @@ abstract class BaseConsumer extends Connector {
     ]));
   }
 
+  async onMessageSuccess(message: ConsumeMessage): Promise<void> {
+    return;
+  }
+
+  async onMessageError(message: ConsumeMessage, error: unknown): Promise<void> {
+    return;
+  }
+
   async onMessage(message: ConsumeMessage | null) {
     if (message === null) {
       return;
@@ -90,6 +98,7 @@ abstract class BaseConsumer extends Connector {
 
       await this.handleMessage(content, message);
       this.channel.ack(message);
+      await this.onMessageSuccess(message);
     } catch (err: any) {
       this.logger.error(err, {
         exchange: this.exchange,
@@ -99,6 +108,7 @@ abstract class BaseConsumer extends Connector {
       });
 
       this.channel.nack(message, this.nack.allUpTo, this.nack.requeue);
+      await this.onMessageError(message, err);
     }
   }
 
