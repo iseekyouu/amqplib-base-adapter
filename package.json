@@ -13,6 +13,7 @@
     "push": "yarn build && yarn publish",
     "consumer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/consumer.example.js",
     "producer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/producer.example.js",
+    "delayed-test": "export TS_NODE_BASEURL=./dist && tsc && node examples/delayed.example.ts",
     "test-server": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/server.js"
   },
   "repository": {

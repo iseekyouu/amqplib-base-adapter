@@ -5,7 +5,7 @@ With all connection logic and logs!
 
 As logger it uses winston.
 
-You can find producer and consumer example in /examples directory
+You can find producer, consumer and delayed queue examples in /examples directory
 
 ## Config
 In the `BaseConsumerConfig` and `BaseProducerConfig` you could pass an array or an object to `rmq`
@@ -118,4 +118,53 @@ class ProducerExample extends BaseProducer {
 const producerExample = new ProducerExample(ProducerExampleConfig);
 void producerExample.run();
 
+```
+
+## Delayed queues
+
+`BaseDelayed` asserts TTL + Dead Letter queues for fixed delay slots. After TTL expires, RabbitMQ dead-letters the message to the work exchange. Send with `BaseProducer`, consume with `BaseConsumer`.
+
+One delay queue per TTL — do not mix different delays in the same queue.
+
+```
+BaseProducer.send
+  -> delay.exchange
+    -> delay.1h  (TTL 1h)
+    -> delay.24h (TTL 24h)
+    -> delay.3d  (TTL 3d)
+      --expired DLX--> work exchange -> work queue
+                                          -> BaseConsumer
+```
+
+```typescript
+import { BaseDelayed, BaseDelayedConfig } from 'amqplib-base-adapter';
+
+const DelayedExampleConfig: BaseDelayedConfig = {
+  exchange: 'delay.exchange',
+  exchangeType: 'direct',
+  deadLetterExchange: 'example_exchange',
+  deadLetterExchangeType: 'topic',
+  deadLetterRoutingKey: 'example_route',
+  queues: [
+    { queue: 'delay.1h', routingKey: 'delay.1h', delayMs: 3_600_000 },
+    { queue: 'delay.24h', routingKey: 'delay.24h', delayMs: 86_400_000 },
+    { queue: 'delay.3d', routingKey: 'delay.3d', delayMs: 259_200_000 },
+  ],
+  rmq: {
+    host: env.RMQ_CLUSTER_ADDRESS,
+    password: env.RMQ_CLUSTER_PASSWORD,
+    port: env.RMQ_CLUSTER_PORT,
+    username: env.RMQ_CLUSTER_USERNAME,
+  },
+  environment: env.ENVIRONMENT,
+};
+
+const delayed = new BaseDelayed(DelayedExampleConfig);
+await delayed.run();
+
+// later, with BaseProducer:
+await producer.send(payload, {
+  exchange: 'delay.exchange',
+  routingKey: 'delay.1h',
+});
 ```

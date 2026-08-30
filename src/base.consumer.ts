@@ -51,8 +51,8 @@ abstract class BaseConsumer extends Connector {
 
     await this.channel.addSetup(async (ch: Channel) => Promise.all([
       ch.assertQueue(this.queue, {
+        durable: true,
         arguments: {
-          durable: true,
           'x-queue-type': 'quorum',
         },
       }),

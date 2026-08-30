@@ -9,6 +9,18 @@ import {
   BaseProducerConfig,
 } from './base.producer';
 
-export { BaseConsumer, BaseProducer };
+import {
+  BaseDelayed,
+  BaseDelayedConfig,
+  DelayedQueueConfig,
+} from './base.delayed';
 
-export type { BaseConsumerConfig, BaseProducerConfig, Message };
+export { BaseConsumer, BaseProducer, BaseDelayed };
+
+export type {
+  BaseConsumerConfig,
+  BaseProducerConfig,
+  BaseDelayedConfig,
+  DelayedQueueConfig,
+  Message,
+};
