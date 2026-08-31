@@ -10,17 +10,17 @@ import {
 } from './base.producer';
 
 import {
-  BaseDelayed,
-  BaseDelayedConfig,
-  DelayedQueueConfig,
-} from './base.delayed';
+  BaseQueue,
+  BaseQueueConfig,
+  ExchangeConfig,
+} from './base.queue';
 
-export { BaseConsumer, BaseProducer, BaseDelayed };
+export { BaseConsumer, BaseProducer, BaseQueue };
 
 export type {
   BaseConsumerConfig,
   BaseProducerConfig,
-  BaseDelayedConfig,
-  DelayedQueueConfig,
+  BaseQueueConfig,
+  ExchangeConfig,
   Message,
 };

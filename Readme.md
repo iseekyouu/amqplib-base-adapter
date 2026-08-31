@@ -5,7 +5,7 @@ With all connection logic and logs!
 
 As logger it uses winston.
 
-You can find producer, consumer and delayed queue examples in /examples directory
+You can find producer, consumer and queue examples in /examples directory
 
 ## Config
 In the `BaseConsumerConfig` and `BaseProducerConfig` you could pass an array or an object to `rmq`
@@ -120,11 +120,13 @@ void producerExample.run();
 
 ```
 
-## Delayed queues
+## Queue setup
 
-`BaseDelayed` asserts TTL + Dead Letter queues for fixed delay slots. After TTL expires, RabbitMQ dead-letters the message to the work exchange. Send with `BaseProducer`, consume with `BaseConsumer`.
+`BaseQueue` asserts one exchange and one queue with custom `assertQueue` options, then binds them. It does not consume. `run()` declares topology and closes the connection. One instance per queue — create several instances for several queues.
 
-One delay queue per TTL — do not mix different delays in the same queue.
+Queues are durable quorum by default. Pass extra `arguments` (TTL, DLX, etc.) per queue. Use `extraExchanges` when a queue needs another exchange, for example a dead-letter exchange.
+
+Delay queues are one use of the same API — one queue per TTL, do not mix different delays in the same queue.
 
 ```
 BaseProducer.send
@@ -137,19 +139,23 @@ BaseProducer.send
 ```
 
 ```typescript
-import { BaseDelayed, BaseDelayedConfig } from 'amqplib-base-adapter';
+import { BaseQueue, BaseQueueConfig } from 'amqplib-base-adapter';
 
-const DelayedExampleConfig: BaseDelayedConfig = {
+const Delay1hConfig: BaseQueueConfig = {
+  queue: 'delay.1h',
   exchange: 'delay.exchange',
   exchangeType: 'direct',
-  deadLetterExchange: 'example_exchange',
-  deadLetterExchangeType: 'topic',
-  deadLetterRoutingKey: 'example_route',
-  queues: [
-    { queue: 'delay.1h', routingKey: 'delay.1h', delayMs: 3_600_000 },
-    { queue: 'delay.24h', routingKey: 'delay.24h', delayMs: 86_400_000 },
-    { queue: 'delay.3d', routingKey: 'delay.3d', delayMs: 259_200_000 },
+  routingKey: 'delay.1h',
+  extraExchanges: [
+    { exchange: 'example_exchange', type: 'topic' },
   ],
+  options: {
+    arguments: {
+      'x-message-ttl': 3_600_000,
+      'x-dead-letter-exchange': 'example_exchange',
+      'x-dead-letter-routing-key': 'example_route',
+    },
+  },
   rmq: {
     host: env.RMQ_CLUSTER_ADDRESS,
     password: env.RMQ_CLUSTER_PASSWORD,
@@ -159,8 +165,8 @@ const DelayedExampleConfig: BaseDelayedConfig = {
   environment: env.ENVIRONMENT,
 };
 
-const delayed = new BaseDelayed(DelayedExampleConfig);
-await delayed.run();
+const delay1h = new BaseQueue(Delay1hConfig);
+await delay1h.run();
 
 // later, with BaseProducer:
 await producer.send(payload, {
