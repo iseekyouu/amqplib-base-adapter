@@ -10,7 +10,7 @@
   ],
   "scripts": {
     "build": "tsc -b",
-    "push": "yarn build && yarn publish",
+    "push": "yarn build && npm publish --registry=https://registry.npmjs.org/",
     "consumer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/consumer.example.js",
     "producer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/producer.example.js",
     "test-server": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/server.js"

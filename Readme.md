@@ -7,6 +7,8 @@ As logger it uses winston.
 
 You can find producer and consumer example in /examples directory
 
+FOR PUBLISH YU MUST HAVE 2FA in NPM
+
 ## Config
 In the `BaseConsumerConfig` and `BaseProducerConfig` you could pass an array or an object to `rmq`
 ```typescript
