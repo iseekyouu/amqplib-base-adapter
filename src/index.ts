@@ -9,6 +9,8 @@ import {
   BaseProducerConfig,
 } from './base.producer';
 
-export { BaseConsumer, BaseProducer };
+import Initializer from './initializer';
+
+export { BaseConsumer, BaseProducer, Initializer };
 
 export type { BaseConsumerConfig, BaseProducerConfig, Message };
