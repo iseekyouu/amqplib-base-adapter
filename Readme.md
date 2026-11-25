@@ -273,6 +273,6 @@ Tests use the built-in `node:test` runner and do not need a running RabbitMQ.
    ```
 3. The `Publish to npm` workflow checks that the tag matches `package.json`, cleans `dist`, runs the tests and publishes the package.
 
-The workflow needs the `NPM_TOKEN` repository secret: an npm automation token of a package owner.
+The workflow publishes through npm Trusted Publishing, no token is needed. It is configured on npmjs.com in the package settings: Trusted Publisher → GitHub Actions, repository `iseekyouu/amqplib-base-adapter`, workflow `publish.yml`.
 
 Manual publishing (fallback) from a clean `master`: `npm login` with 2FA, then `yarn push`. `prepublishOnly` cleans `dist`, builds and runs the tests before publishing.
