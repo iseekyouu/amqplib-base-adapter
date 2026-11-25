@@ -12,12 +12,14 @@
     "Readme.md"
   ],
   "scripts": {
+    "clean": "rm -rf dist",
     "build": "tsc -b",
-    "push": "yarn build && npm publish --registry=https://registry.npmjs.org/",
+    "push": "npm publish --registry=https://registry.npmjs.org/",
     "consumer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/consumer.example.js",
     "producer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/producer.example.js",
     "test-server": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/server.js",
-    "test": "tsc -b && node --test dist/test/"
+    "test": "tsc -b && node --test dist/test/",
+    "prepublishOnly": "yarn clean && yarn test"
   },
   "repository": {
     "type": "git",

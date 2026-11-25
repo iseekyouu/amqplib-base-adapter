@@ -9,8 +9,6 @@ You can find producer and consumer example in /examples directory
 
 Requires Node.js 18 or later.
 
-FOR PUBLISH YOU MUST HAVE 2FA IN NPM
-
 ## Config
 In the `BaseConsumerConfig` and `BaseProducerConfig` you could pass an array or an object to `rmq`
 ```typescript
@@ -264,3 +262,17 @@ yarn test
 ```
 
 Tests use the built-in `node:test` runner and do not need a running RabbitMQ.
+
+## Publishing
+1. Bump `version` in `package.json` in the pull request.
+2. After the pull request is merged, tag the merge commit and push the tag:
+   ```bash
+   git switch master && git pull --ff-only
+   git tag v1.5.0
+   git push origin v1.5.0
+   ```
+3. The `Publish to npm` workflow checks that the tag matches `package.json`, cleans `dist`, runs the tests and publishes the package.
+
+The workflow needs the `NPM_TOKEN` repository secret: an npm automation token of a package owner.
+
+Manual publishing (fallback) from a clean `master`: `npm login` with 2FA, then `yarn push`. `prepublishOnly` cleans `dist`, builds and runs the tests before publishing.
