@@ -1,9 +1,12 @@
 {
   "name": "amqplib-base-adapter",
-  "version": "1.4.2",
-  "description": "base adapter form amqplib",
+  "version": "1.5.0",
+  "description": "Base adapter for amqplib",
   "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
+  "engines": {
+    "node": ">=18"
+  },
   "files": [
     "dist/src",
     "Readme.md"
@@ -13,7 +16,8 @@
     "push": "yarn build && npm publish --registry=https://registry.npmjs.org/",
     "consumer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/consumer.example.js",
     "producer-test": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/producer.example.js",
-    "test-server": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/server.js"
+    "test-server": "export TS_NODE_BASEURL=./dist && tsc && node dist/examples/server.js",
+    "test": "tsc -b && node --test dist/test/"
   },
   "repository": {
     "type": "git",

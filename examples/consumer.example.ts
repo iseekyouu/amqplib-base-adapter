@@ -1,4 +1,4 @@
-import { BaseConsumer, BaseConsumerConfig } from '../src/base.consumer';
+import { BaseConsumer, BaseConsumerConfig, Message } from '../src/base.consumer';
 import { env } from './config';
 
 export const ConsumerExampleConfig: BaseConsumerConfig = {
@@ -17,16 +17,31 @@ export const ConsumerExampleConfig: BaseConsumerConfig = {
   nack: {
     allUpTo: false,
     requeue: false,
-  }
+  },
+  retryIntervalMs: 5000,
 };
+
+const isDatabaseAvailable = async (): Promise<boolean> => true;
 
 class ConsumerExample extends BaseConsumer {
   async handleMessage(message: any) {
-    try {
-      this.logger.info({ message });
-    } catch (err) {
-      this.logger.error('[ConsumerExample] error handle message', err);
-    }
+    this.logger.info({ message });
+  }
+
+  isRetryableError(error: unknown) {
+    return (error as NodeJS.ErrnoException)?.code === 'ECONNREFUSED';
+  }
+
+  async isReady() {
+    return isDatabaseAvailable();
+  }
+
+  async onMessageSuccess(message: Message) {
+    this.logger.info('[ConsumerExample] message processed', { deliveryTag: message.fields.deliveryTag });
+  }
+
+  async onMessageError(message: Message, error: unknown) {
+    this.logger.error('[ConsumerExample] message rejected', { deliveryTag: message.fields.deliveryTag, error });
   }
 
   onClose() {
@@ -39,6 +54,14 @@ class ConsumerExample extends BaseConsumer {
 
   onConnectionFailed(error: Error) {
     this.logger.error('[ConsumerExample] Connection failed:', error);
+  }
+
+  onBlocked(error: Error) {
+    this.logger.error('[ConsumerExample] Connection blocked:', error);
+  }
+
+  onDisconnected(error: Error) {
+    this.logger.error('[ConsumerExample] Connection disconnected:', error);
   }
 }
 

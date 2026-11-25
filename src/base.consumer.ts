@@ -1,3 +1,4 @@
+import { setTimeout as sleep } from 'timers/promises';
 import { Channel } from 'amqp-connection-manager';
 import { Connector, ConnectorConfig } from './connector';
 import { ConsumeMessage } from 'amqplib';
@@ -14,6 +15,7 @@ interface BaseConsumerConfig extends ConnectorConfig {
   routingKey: string,
   prefetch: number
   nack?: Nack,
+  retryIntervalMs?: number,
 }
 
 abstract class BaseConsumer extends Connector {
@@ -29,6 +31,10 @@ abstract class BaseConsumer extends Connector {
 
   public nack: Nack;
 
+  protected readonly retryIntervalMs: number;
+
+  protected channelGeneration = 0;
+
   constructor(config: BaseConsumerConfig) {
     super(config);
     this.queue = config.queue;
@@ -40,6 +46,7 @@ abstract class BaseConsumer extends Connector {
       allUpTo: false,
       requeue: true,
     };
+    this.retryIntervalMs = config.retryIntervalMs ?? 1000;
   }
 
   async run(): Promise<void> {
@@ -49,25 +56,37 @@ abstract class BaseConsumer extends Connector {
       process.exit(1);
     }
 
-    await this.channel.addSetup(async (ch: Channel) => Promise.all([
-      ch.assertQueue(this.queue, {
-        arguments: {
-          durable: true,
-          'x-queue-type': 'quorum',
-        },
-      }),
-      ch.assertExchange(this.exchange, this.exchangeType, { durable: true }),
-      ch.prefetch(this.prefetch ? 1 : 0),
-      ch.bindQueue(
-        this.queue,
-        this.exchange,
-        this.routingKey,
-      ),
-      ch.consume(
-        this.queue,
-        (message) => { void this.onMessage(message); },
-      ),
-    ]));
+    await this.channel.addSetup(async (ch: Channel) => {
+      this.channelGeneration += 1;
+
+      return Promise.all([
+        ch.assertQueue(this.queue, {
+          arguments: {
+            durable: true,
+            'x-queue-type': 'quorum',
+          },
+        }),
+        ch.assertExchange(this.exchange, this.exchangeType, { durable: true }),
+        ch.prefetch(this.prefetch ? 1 : 0),
+        ch.bindQueue(
+          this.queue,
+          this.exchange,
+          this.routingKey,
+        ),
+        ch.consume(
+          this.queue,
+          (message) => { void this.onMessage(message); },
+        ),
+      ]);
+    });
+  }
+
+  isRetryableError(error: unknown): boolean {
+    return false;
+  }
+
+  async isReady(): Promise<boolean> {
+    return true;
   }
 
   async onMessageSuccess(message: ConsumeMessage): Promise<void> {
@@ -87,28 +106,86 @@ abstract class BaseConsumer extends Connector {
       return;
     }
 
-    try {
-      const content = JSON.parse(message.content.toString());
-      this.logger.debug(JSON.stringify(content), {
-        type: 'amqp-message',
-        exchange: this.exchange,
-        queue: this.queue,
-        routingKey: this.routingKey,
-      });
+    const generation = this.channelGeneration;
+    let content: unknown;
 
-      await this.handleMessage(content, message);
-      this.channel.ack(message);
-      await this.onMessageSuccess(message);
+    try {
+      content = JSON.parse(message.content.toString());
+    } catch (err) {
+      await this.rejectMessage(message, err);
+      return;
+    }
+
+    this.logger.debug(JSON.stringify(content), {
+      type: 'amqp-message',
+      exchange: this.exchange,
+      queue: this.queue,
+      routingKey: this.routingKey,
+    });
+
+    while (await this.waitUntilReady(generation)) {
+      try {
+        await this.handleMessage(content, message);
+      } catch (err) {
+        if (!this.isRetryableError(err)) {
+          await this.rejectMessage(message, err);
+          return;
+        }
+        await sleep(this.retryIntervalMs);
+        continue;
+      }
+
+      if (generation === this.channelGeneration) {
+        this.channel.ack(message);
+        await this.runHook('onMessageSuccess', () => this.onMessageSuccess(message));
+      }
+      return;
+    }
+  }
+
+  private async waitUntilReady(generation: number): Promise<boolean> {
+    while (generation === this.channelGeneration) {
+      if (await this.checkReady()) {
+        return generation === this.channelGeneration;
+      }
+      await sleep(this.retryIntervalMs);
+    }
+    return false;
+  }
+
+  private async checkReady(): Promise<boolean> {
+    try {
+      return await this.isReady();
     } catch (err: any) {
       this.logger.error(err, {
-        exchange: this.exchange,
+        type: 'amqp-ready-check-failed',
         queue: this.queue,
-        routingKey: this.routingKey,
-        content: message.content.toString(),
       });
+      return false;
+    }
+  }
 
-      this.channel.nack(message, this.nack.allUpTo, this.nack.requeue);
-      await this.onMessageError(message, err);
+  private async rejectMessage(message: ConsumeMessage, error: any): Promise<void> {
+    this.logger.error(error, {
+      exchange: this.exchange,
+      queue: this.queue,
+      routingKey: this.routingKey,
+      content: message.content.toString(),
+    });
+
+    this.channel?.nack(message, this.nack.allUpTo, this.nack.requeue);
+    await this.runHook('onMessageError', () => this.onMessageError(message, error));
+  }
+
+  private async runHook(name: string, hook: () => Promise<void>): Promise<void> {
+    try {
+      await hook();
+    } catch (err: any) {
+      this.logger.error(err, {
+        type: 'amqp-hook-failed',
+        hook: name,
+        queue: this.queue,
+      });
     }
   }
 
