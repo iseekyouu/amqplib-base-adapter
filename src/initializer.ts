@@ -1,4 +1,4 @@
-import { Connector, ConnectorConfig } from 'connector';
+import { Connector, ConnectorConfig } from './connector';
 
 export default class Initializer extends Connector {
   constructor(config: ConnectorConfig) {

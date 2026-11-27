@@ -16,16 +16,12 @@ export const ProducerExampleConfig: BaseProducerConfig = {
 
 class ProducerExample extends BaseProducer {
   async publish() {
-    try {
-      const message: Buffer = Buffer.from(JSON.stringify({
-        test: 'testdata1',
-      }));
+    const sent = await this.send({ test: 'testdata1' });
+    this.logger.info('[ProducerExample] publish result', { sent });
+  }
 
-      const result = await this.channel?.publish(this.exchange, this.routingKey, message);
-      this.logger.info('[ProducerExample] publish result: ', { result, message });
-    } catch (error) {
-      this.logger.error('[ProducerExample] error publish messages', error);
-    }
+  async onSendError(error: unknown) {
+    this.logger.error('[ProducerExample] send failed', { error });
   }
 
   onClose() {
@@ -38,6 +34,14 @@ class ProducerExample extends BaseProducer {
 
   onConnectionFailed(error: Error) {
     this.logger.error('[ProducerExample] Connection failed:', error);
+  }
+
+  onBlocked(error: Error) {
+    this.logger.error('[ProducerExample] Connection blocked:', error);
+  }
+
+  onDisconnected(error: Error) {
+    this.logger.error('[ProducerExample] Connection disconnected:', error);
   }
 }
 

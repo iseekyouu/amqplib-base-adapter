@@ -52,7 +52,9 @@ abstract class BaseProducer extends Connector {
     await this.stop();
   }
 
-  abstract publish(): Promise<void>;
+  async publish(): Promise<void> {
+    throw new Error('publish() is not implemented: override it to use run(), or send messages with send()');
+  }
 
   async onSendError(error: unknown): Promise<void> {
     return;
