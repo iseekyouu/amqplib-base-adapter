@@ -35,6 +35,8 @@ abstract class BaseConsumer extends Connector {
 
   protected channelGeneration = 0;
 
+  private static readonly retryLogIntervalMs = 60_000;
+
   constructor(config: BaseConsumerConfig) {
     super(config);
     this.queue = config.queue;
@@ -81,7 +83,7 @@ abstract class BaseConsumer extends Connector {
     });
   }
 
-  isRetryableError(error: unknown): boolean {
+  isRetryableError(error: unknown, attempt: number): boolean {
     return false;
   }
 
@@ -112,7 +114,7 @@ abstract class BaseConsumer extends Connector {
     try {
       content = JSON.parse(message.content.toString());
     } catch (err) {
-      await this.rejectMessage(message, err);
+      await this.rejectMessage(message, err, generation);
       return;
     }
 
@@ -123,13 +125,25 @@ abstract class BaseConsumer extends Connector {
       routingKey: this.routingKey,
     });
 
+    let attempt = 0;
+    let lastRetryLogAt = 0;
+
     while (await this.waitUntilReady(generation)) {
+      attempt += 1;
+
       try {
         await this.handleMessage(content, message);
       } catch (err) {
-        if (!this.isRetryableError(err)) {
-          await this.rejectMessage(message, err);
+        if (generation !== this.channelGeneration) {
           return;
+        }
+        if (!this.isRetryableError(err, attempt)) {
+          await this.rejectMessage(message, err, generation);
+          return;
+        }
+        if (Date.now() - lastRetryLogAt >= BaseConsumer.retryLogIntervalMs) {
+          lastRetryLogAt = Date.now();
+          this.logRetry(message, err, attempt);
         }
         await sleep(this.retryIntervalMs);
         continue;
@@ -165,13 +179,34 @@ abstract class BaseConsumer extends Connector {
     }
   }
 
-  private async rejectMessage(message: ConsumeMessage, error: any): Promise<void> {
+  async stop(): Promise<void> {
+    this.channelGeneration += 1;
+    await this.channel?.close();
+    await this.connection?.close();
+  }
+
+  private logRetry(message: ConsumeMessage, error: any, attempt: number): void {
+    this.logger.error(error, {
+      type: 'amqp-message-retry',
+      attempt,
+      exchange: this.exchange,
+      queue: this.queue,
+      routingKey: this.routingKey,
+      content: message.content.toString(),
+    });
+  }
+
+  private async rejectMessage(message: ConsumeMessage, error: any, generation: number): Promise<void> {
     this.logger.error(error, {
       exchange: this.exchange,
       queue: this.queue,
       routingKey: this.routingKey,
       content: message.content.toString(),
     });
+
+    if (generation !== this.channelGeneration) {
+      return;
+    }
 
     this.channel?.nack(message, this.nack.allUpTo, this.nack.requeue);
     await this.runHook('onMessageError', () => this.onMessageError(message, error));

@@ -60,6 +60,12 @@ class TestConsumer extends BaseConsumer {
 
   prefetchCount: number | null = null;
 
+  retryAttempts: number[] = [];
+
+  retryLogs: unknown[] = [];
+
+  closed: string[] = [];
+
   consumeCallback: ((message: ConsumeMessage | null) => void) | null = null;
 
   private setup: ((ch: unknown) => Promise<unknown>) | null = null;
@@ -76,8 +82,16 @@ class TestConsumer extends BaseConsumer {
 
   constructor(overrides: Partial<BaseConsumerConfig> = {}) {
     super({ ...config, ...overrides });
-    this.logger = silentLogger;
+    this.logger = {
+      ...silentLogger,
+      error: (error: unknown, meta?: { type?: string }) => {
+        if (meta?.type === 'amqp-message-retry') {
+          this.retryLogs.push(meta);
+        }
+      },
+    } as unknown as Logger;
     this.channel = {
+      close: async () => { this.closed.push('channel'); },
       ack: (message: ConsumeMessage) => { this.acks.push(message); },
       nack: (message: ConsumeMessage, allUpTo: boolean, requeue: boolean) => {
         this.nacks.push({ message, allUpTo, requeue });
@@ -90,7 +104,9 @@ class TestConsumer extends BaseConsumer {
   }
 
   connect() {
-    this.connection = {} as unknown as AmqpConnectionManager;
+    this.connection = {
+      close: async () => { this.closed.push('connection'); },
+    } as unknown as AmqpConnectionManager;
   }
 
   get generation(): number {
@@ -112,7 +128,8 @@ class TestConsumer extends BaseConsumer {
     await this.handler(this, this.handled);
   }
 
-  isRetryableError(error: unknown): boolean {
+  isRetryableError(error: unknown, attempt: number): boolean {
+    this.retryAttempts.push(attempt);
     return error instanceof RetryableError;
   }
 
@@ -403,4 +420,95 @@ test('drops delivery without ack or nack when channel is set up again during ret
   assert.equal(consumer.handled, 1);
   assert.equal(consumer.acks.length, 0);
   assert.equal(consumer.nacks.length, 0);
+});
+
+test('does not nack when channel reconnects before handler throws non-retryable error', async () => {
+  const consumer = new TestConsumer({ nack: { allUpTo: false, requeue: false } });
+  consumer.handler = async (self) => {
+    self.simulateReconnect();
+    throw new Error('bad message');
+  };
+
+  await consumer.onMessage(createMessage('{"id":1}'));
+
+  assert.equal(consumer.handled, 1);
+  assert.equal(consumer.acks.length, 0);
+  assert.equal(consumer.nacks.length, 0);
+  assert.equal(consumer.errorHooks.length, 0);
+});
+
+test('passes attempt number to isRetryableError', async () => {
+  const consumer = new TestConsumer();
+  consumer.handler = async (_, attempt) => {
+    if (attempt < 3) {
+      throw new RetryableError('db is down');
+    }
+  };
+
+  await consumer.onMessage(createMessage('{"id":1}'));
+
+  assert.deepEqual(consumer.retryAttempts, [1, 2]);
+});
+
+test('rejects message when isRetryableError returns false for a later attempt', async () => {
+  const consumer = new TestConsumer();
+  consumer.isRetryableError = (error: unknown, attempt: number) => attempt < 3;
+  consumer.handler = async () => { throw new RetryableError('db is down'); };
+  const message = createMessage('{"id":1}');
+
+  await consumer.onMessage(message);
+
+  assert.equal(consumer.handled, 3);
+  assert.deepEqual(consumer.nacks, [{ message, allUpTo: false, requeue: true }]);
+});
+
+test('logs first retry and rate-limits the following ones', async () => {
+  const consumer = new TestConsumer();
+  consumer.handler = async (_, attempt) => {
+    if (attempt < 5) {
+      throw new RetryableError('db is down');
+    }
+  };
+
+  await consumer.onMessage(createMessage('{"id":1}'));
+
+  assert.equal(consumer.handled, 5);
+  assert.deepEqual(consumer.retryLogs, [{
+    type: 'amqp-message-retry',
+    attempt: 1,
+    exchange: config.exchange,
+    queue: config.queue,
+    routingKey: config.routingKey,
+    content: '{"id":1}',
+  }]);
+});
+
+test('stop ends waiting without ack or nack and closes channel and connection', async () => {
+  const consumer = new TestConsumer();
+  await consumer.run();
+  consumer.readyImpl = async (check) => {
+    if (check === 2) {
+      await consumer.stop();
+    }
+    return false;
+  };
+
+  await consumer.onMessage(createMessage('{"id":1}'));
+
+  assert.equal(consumer.handled, 0);
+  assert.equal(consumer.acks.length, 0);
+  assert.equal(consumer.nacks.length, 0);
+  assert.deepEqual(consumer.closed, ['channel', 'connection']);
+});
+
+test('stop prevents ack of a message whose handler finishes after stop', async () => {
+  const consumer = new TestConsumer();
+  await consumer.run();
+  consumer.handler = async (self) => { await self.stop(); };
+
+  await consumer.onMessage(createMessage('{"id":1}'));
+
+  assert.equal(consumer.handled, 1);
+  assert.equal(consumer.acks.length, 0);
+  assert.equal(consumer.successHooks, 0);
 });

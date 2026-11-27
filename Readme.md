@@ -37,12 +37,14 @@ const ExampleConfig = {
 | Method | Required | Default | Override to |
 | --- | --- | --- | --- |
 | `handleMessage(content, message)` | yes | — | process a message |
-| `isRetryableError(error)` | no | `false` | mark transient errors (e.g. database is down) as retryable, see [Retrying transient errors](#retrying-transient-errors) |
+| `isRetryableError(error, attempt)` | no | `false` | mark transient errors (e.g. database is down) as retryable, see [Retrying transient errors](#retrying-transient-errors) |
 | `isReady()` | no | `true` | report whether a dependency (e.g. database) is available, checked before every attempt |
 | `onMessageSuccess(message)` | no | does nothing | run code after a message is acked |
 | `onMessageError(message, error)` | no | does nothing | run code after a message is nacked |
 
 The pause between readiness checks and between attempts is set with `retryIntervalMs` in `BaseConsumerConfig` (1000 ms by default).
+
+To shut a consumer down, call `await consumer.stop()`: it stops messages that are waiting or being retried (they are neither acked nor nacked, the broker requeues them) and closes the channel and the connection.
 
 ### Producer (`BaseProducer`)
 | Method | Required | Default | Override to |
@@ -140,7 +142,7 @@ Do not catch errors in `handleMessage` only to log them: the message is then ack
 
 ## Retrying transient errors
 To keep a message while a dependency (e.g. a database) is down, override two methods:
-- `isRetryableError(error)` returns `true` for transient errors. Such a message is neither acked nor nacked: the consumer waits and calls `handleMessage` again.
+- `isRetryableError(error, attempt)` returns `true` for transient errors. Such a message is neither acked nor nacked: the consumer waits and calls `handleMessage` again. `attempt` is the number of the failed attempt, starting from 1. Return `false` after some number of attempts to stop retrying: the message is then nacked with the `nack` config.
 - `isReady()` returns `true` when the dependency is available. Before every attempt, including the first one, the consumer checks it every `retryIntervalMs` until it returns `true`. If `isReady()` throws, the error is logged and the consumer keeps waiting.
 
 ```typescript
@@ -159,8 +161,13 @@ class ConsumerExample extends BaseConsumer {
 }
 ```
 
+There is no retry limit by default: a message is retried until it succeeds or `isRetryableError` returns `false`. Keep `isRetryableError` narrow. If it also matches permanent errors (e.g. a base class that covers both network errors and duplicate key errors), one message blocks the queue forever.
+
+Every retry is logged with type `amqp-message-retry` and the attempt number: the first one, then at most once a minute per message.
+
 Notes:
-- Use `prefetch: 1`. With `prefetch: 0` the broker keeps delivering messages while the consumer waits.
+- Use `prefetch: 1`. Any non-zero `prefetch` value means 1, and `prefetch: 0` means no limit: the broker then delivers the whole queue to the consumer, and every message polls `isReady()` while it waits.
+- RabbitMQ closes the channel when a message stays unacknowledged longer than `consumer_timeout` (30 minutes by default). The consumer reconnects and the message is redelivered with `x-delivery-count` increased by 1. Quorum queues have a `delivery-limit` (20 by default on RabbitMQ 4.x), after which the message is dropped or dead-lettered. So an outage longer than about `delivery-limit` × `consumer_timeout` can lose the message. Raise `consumer_timeout` or `delivery-limit`, or configure a dead letter exchange, if outages can last that long.
 - If the process is killed while waiting, the message stays unacknowledged and the broker redelivers it.
 - If the channel reconnects while waiting, the broker has already requeued the message, so the consumer stops waiting and drops this delivery without ack or nack.
 - `retryIntervalMs` in the config (1000 ms by default) is the pause between readiness checks and between attempts.
@@ -273,6 +280,6 @@ Tests use the built-in `node:test` runner and do not need a running RabbitMQ.
    ```
 3. The `Publish to npm` workflow checks that the tag matches `package.json`, cleans `dist`, runs the tests and publishes the package.
 
-The workflow publishes through npm Trusted Publishing, no token is needed. It is configured on npmjs.com in the package settings: Trusted Publisher → GitHub Actions, repository `iseekyouu/amqplib-base-adapter`, workflow `publish.yml`.
+The workflow publishes through npm Trusted Publishing, no token is needed. It is configured on npmjs.com in the package settings: Trusted Publisher → GitHub Actions, repository `iseekyouu/amqplib-base-adapter`, workflow `publish.yml`. Once it works, set publishing access to "Require two-factor authentication and disallow tokens" and revoke old publish tokens.
 
 Manual publishing (fallback) from a clean `master`: `npm login` with 2FA, then `yarn push`. `prepublishOnly` cleans `dist`, builds and runs the tests before publishing.
